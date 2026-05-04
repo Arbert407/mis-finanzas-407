@@ -51,12 +51,14 @@
             min-height: 100vh;
             line-height: 1.5;
             font-size: 14px;
+            overflow-x: hidden;
         }
 
         .app {
             min-height: 100vh;
             display: flex;
             flex-direction: column;
+            overflow-x: hidden;
         }
 
         .container {
@@ -711,6 +713,10 @@
             background: rgba(255,255,255,0.02);
         }
 
+        .transaction-actions-row {
+            display: none;
+        }
+
         .category-badge {
             display: inline-flex;
             align-items: center;
@@ -729,10 +735,86 @@
             font-size: 11px;
         }
 
-        @media (max-width: 768px) {
-            .transactions-table th:nth-child(2),
-            .transactions-table td:nth-child(2) {
+@media (max-width: 768px) {
+            .transactions-table thead {
                 display: none;
+            }
+
+            .transactions-table {
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .transactions-table tbody {
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .transactions-table tr {
+                display: flex;
+                flex-direction: column;
+                background: var(--surface);
+                border-radius: 12px;
+                border: 1px solid var(--border);
+                overflow: hidden;
+                padding: 16px;
+                gap: 12px;
+            }
+
+            .transactions-table td {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 0;
+                border: none;
+            }
+
+            .transactions-table td::before {
+                content: attr(data-label);
+                font-size: 11px;
+                font-weight: 600;
+                color: var(--text-muted);
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+
+            .transaction-actions-row {
+                display: flex !important;
+                justify-content: center;
+                gap: 8px;
+                padding-top: 12px;
+                border-top: 1px dashed var(--border);
+                margin-top: 8px;
+                width: 100%;
+            }
+
+            .transaction-actions-row td {
+                display: block;
+                padding: 0;
+                width: auto;
+            }
+
+            .transactions-table .transaction-item__actions {
+                display: flex;
+                gap: 8px;
+                justify-content: center;
+                flex-wrap: wrap;
+                width: 100%;
+            }
+
+            .transactions-table .btn--edit,
+            .transactions-table .btn--delete {
+                padding: 8px 12px;
+                font-size: 11px;
+                flex: 1 1 auto;
+                min-width: 0;
+                max-width: 100%;
+            }
+
+            .category-badge {
+                font-size: 18px;
             }
         }
 
@@ -1626,12 +1708,14 @@
                             <tbody>
                                 ${sorted.map(t => `
                                     <tr>
-                                        <td>${formatDate(t.fecha)}</td>
-                                        <td>${t.descripcion || '-'}</td>
-                                        <td><span class="category-badge">${t.categoria?.icono || ''} ${t.categoria?.nombre || '-'}</span></td>
-                                        <td><span class="transaction-item__type transaction-item__type--${t.tipo.toLowerCase()}">${t.tipo}</span></td>
-                                        <td class="transaction-item__amount transaction-item__amount--${t.tipo.toLowerCase()}">${t.tipo === 'Gasto' ? '-' : '+'}${formatCurrency(t.monto)}</td>
-                                        <td>
+                                        <td data-label="Fecha">${formatDate(t.fecha)}</td>
+                                        <td data-label="Descripción">${t.descripcion || '-'}</td>
+                                        <td data-label="Categoría"><span class="category-badge">${t.categoria?.icono || ''}<span class="category-name"> ${t.categoria?.nombre || '-'}</span></span></td>
+                                        <td data-label="Tipo"><span class="transaction-item__type transaction-item__type--${t.tipo.toLowerCase()}">${t.tipo}</span></td>
+                                        <td data-label="Monto" class="transaction-item__amount transaction-item__amount--${t.tipo.toLowerCase()}">${t.tipo === 'Gasto' ? '-' : '+'}${formatCurrency(t.monto)}</td>
+                                    </tr>
+                                    <tr class="transaction-actions-row">
+                                        <td colspan="5">
                                             <div class="transaction-item__actions">
                                                 <button class="btn--edit" onclick="editTransaction('${t.id}')">Editar</button>
                                                 <button class="btn--delete" onclick="confirmDeleteTransaction('${t.id}')">Eliminar</button>
@@ -1690,18 +1774,19 @@
                                     <th>Categoría</th>
                                     <th>Tipo</th>
                                     <th>Monto</th>
-                                    <th></th>
                                 </tr>
                             </thead>
                             <tbody>
                                 ${filtered.map(t => `
                                     <tr>
-                                        <td>${formatDate(t.fecha)}</td>
-                                        <td>${t.descripcion || '-'}</td>
-                                        <td><span class="category-badge">${t.categoria?.icono || ''} ${t.categoria?.nombre || '-'}</span></td>
-                                        <td><span class="transaction-item__type transaction-item__type--${t.tipo.toLowerCase()}">${t.tipo}</span></td>
-                                        <td class="transaction-item__amount transaction-item__amount--${t.tipo.toLowerCase()}">${t.tipo === 'Gasto' ? '-' : '+'}${formatCurrency(t.monto)}</td>
-                                        <td>
+                                        <td data-label="Fecha">${formatDate(t.fecha)}</td>
+                                        <td data-label="Descripción">${t.descripcion || '-'}</td>
+                                        <td data-label="Categoría"><span class="category-badge">${t.categoria?.icono || ''}<span class="category-name"> ${t.categoria?.nombre || '-'}</span></span></td>
+                                        <td data-label="Tipo"><span class="transaction-item__type transaction-item__type--${t.tipo.toLowerCase()}">${t.tipo}</span></td>
+                                        <td data-label="Monto" class="transaction-item__amount transaction-item__amount--${t.tipo.toLowerCase()}">${t.tipo === 'Gasto' ? '-' : '+'}${formatCurrency(t.monto)}</td>
+                                    </tr>
+                                    <tr class="transaction-actions-row">
+                                        <td colspan="5">
                                             <div class="transaction-item__actions">
                                                 <button class="btn--edit" onclick="editTransaction('${t.id}')">Editar</button>
                                                 <button class="btn--delete" onclick="confirmDeleteTransaction('${t.id}')">Eliminar</button>
