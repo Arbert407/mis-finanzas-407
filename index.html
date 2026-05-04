@@ -798,41 +798,11 @@
                 letter-spacing: 0.5px;
             }
 
-            .transaction-actions-row {
-                display: flex !important;
-                justify-content: center;
-                gap: 8px;
-                padding-top: 12px;
+            .transactions-table .transaction-item__actions {
+                justify-content: flex-end;
+                padding-top: 8px;
                 border-top: 1px dashed var(--border);
                 margin-top: 8px;
-                width: 100%;
-            }
-
-            .transaction-actions-row td {
-                display: block;
-                padding: 0;
-                width: auto;
-            }
-
-            .transactions-table .transaction-item__actions {
-                display: flex;
-                gap: 8px;
-                justify-content: center;
-                flex-wrap: wrap;
-                width: 100%;
-            }
-
-            .transactions-table .btn--edit,
-            .transactions-table .btn--delete {
-                padding: 8px 12px;
-                font-size: 11px;
-                flex: 1 1 auto;
-                min-width: 0;
-                max-width: 100%;
-            }
-
-            .category-badge {
-                font-size: 18px;
             }
         }
 
@@ -1731,7 +1701,7 @@
                                     <th>Categoría</th>
                                     <th>Tipo</th>
                                     <th>Monto</th>
-                                    <th></th>
+                                    <th>Acciones</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -1742,13 +1712,9 @@
                                         <td data-label="Categoría"><span class="category-badge">${t.categoria?.icono || ''}<span class="category-name"> ${t.categoria?.nombre || '-'}</span></span></td>
                                         <td data-label="Tipo"><span class="transaction-item__type transaction-item__type--${t.tipo.toLowerCase()}">${t.tipo}</span></td>
                                         <td data-label="Monto" class="transaction-item__amount transaction-item__amount--${t.tipo.toLowerCase()}">${t.tipo === 'Gasto' ? '-' : '+'}${formatCurrency(t.monto)}</td>
-                                    </tr>
-                                    <tr class="transaction-actions-row">
-                                        <td colspan="5">
-                                            <div class="transaction-item__actions">
-                                                <button class="btn--edit" onclick="editTransaction('${t.id}')">Editar</button>
-                                                <button class="btn--delete" onclick="confirmDeleteTransaction('${t.id}')">Eliminar</button>
-                                            </div>
+                                        <td class="transaction-item__actions" data-label="Acciones">
+                                            <button class="btn--edit" onclick="editTransaction('${t.id}')">Editar</button>
+                                            <button class="btn--delete" onclick="confirmDeleteTransaction('${t.id}')">Eliminar</button>
                                         </td>
                                     </tr>
                                 `).join('')}
@@ -1803,6 +1769,7 @@
                                     <th>Categoría</th>
                                     <th>Tipo</th>
                                     <th>Monto</th>
+                                    <th>Acciones</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -1813,13 +1780,9 @@
                                         <td data-label="Categoría"><span class="category-badge">${t.categoria?.icono || ''}<span class="category-name"> ${t.categoria?.nombre || '-'}</span></span></td>
                                         <td data-label="Tipo"><span class="transaction-item__type transaction-item__type--${t.tipo.toLowerCase()}">${t.tipo}</span></td>
                                         <td data-label="Monto" class="transaction-item__amount transaction-item__amount--${t.tipo.toLowerCase()}">${t.tipo === 'Gasto' ? '-' : '+'}${formatCurrency(t.monto)}</td>
-                                    </tr>
-                                    <tr class="transaction-actions-row">
-                                        <td colspan="5">
-                                            <div class="transaction-item__actions">
-                                                <button class="btn--edit" onclick="editTransaction('${t.id}')">Editar</button>
-                                                <button class="btn--delete" onclick="confirmDeleteTransaction('${t.id}')">Eliminar</button>
-                                            </div>
+                                        <td class="transaction-item__actions" data-label="Acciones">
+                                            <button class="btn--edit" onclick="editTransaction('${t.id}')">Editar</button>
+                                            <button class="btn--delete" onclick="confirmDeleteTransaction('${t.id}')">Eliminar</button>
                                         </td>
                                     </tr>
                                 `).join('')}
