@@ -12,14 +12,27 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+    const url = new URL(event.request.url);
+    if (url.origin !== location.origin) return;
+
     event.respondWith(
         fetch(event.request)
             .then((response) => {
-                const clone = response.clone();
-                caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+                if (response.ok) {
+                    const clone = response.clone();
+                    caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+                }
                 return response;
             })
-            .catch(() => caches.match(event.request))
+            .catch(() => {
+                return caches.match(event.request).then((cached) => {
+                    if (cached) return cached;
+                    if (url.pathname.endsWith('.js') || url.pathname.endsWith('.css')) {
+                        return new Response('//# sourceMappingURL=', { headers: { 'Content-Type': 'text/javascript' } });
+                    }
+                    return caches.match('./index.html');
+                });
+            })
     );
 });
 
