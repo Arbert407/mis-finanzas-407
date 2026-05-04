@@ -2061,9 +2061,13 @@
             const content = document.getElementById('modal-content');
             const cancelBtn = document.getElementById('modal-cancel');
             const confirmBtn = document.getElementById('modal-confirm');
+            const importBtn = document.getElementById('modal-import');
 
             title.textContent = 'Eliminar Movimiento';
             content.textContent = '¿Estás seguro de que deseas eliminar este movimiento? Esta acción no se puede deshacer.';
+            cancelBtn.style.display = '';
+            confirmBtn.style.display = '';
+            importBtn.style.display = 'none';
 
             overlay.classList.add('modal-overlay--active');
 
@@ -2096,6 +2100,7 @@
             const contentEl = document.getElementById('modal-content');
             const cancelBtn = document.getElementById('modal-cancel');
             const confirmBtn = document.getElementById('modal-confirm');
+            const importBtn = document.getElementById('modal-import');
 
             titleEl.textContent = 'Ajustes';
             contentEl.innerHTML = `<div id="settings-content" style="display: flex; flex-direction: column; gap: 8px;">
@@ -2105,6 +2110,7 @@
             cancelBtn.textContent = 'Cerrar';
             cancelBtn.onclick = closeModal;
             confirmBtn.style.display = 'none';
+            importBtn.style.display = '';
 
             const overlay = document.getElementById('modal-overlay');
             overlay.classList.add('modal-overlay--active');
