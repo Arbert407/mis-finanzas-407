@@ -7,6 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <style>
         :root {
             --primary: #4CC9F0;
@@ -552,6 +553,53 @@
             background: #DC2626;
         }
 
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 300px;
+            margin: 0 auto;
+        }
+
+        .chart-container--bar {
+            max-width: 100%;
+            min-height: 200px;
+        }
+
+        .chart-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .chart-card__title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--text-primary);
+        }
+
+        .chart-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            justify-content: center;
+            margin-top: 16px;
+        }
+
+        .chart-legend__item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .chart-legend__color {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+        }
+
         /* Dashboard */
         .dashboard-grid {
             display: grid;
@@ -829,9 +877,11 @@
          * @returns {string} Monto formateado
          */
         const formatCurrency = (amount) => {
-            return new Intl.NumberFormat('es-ES', {
+            return new Intl.NumberFormat('en-US', {
                 style: 'currency',
-                currency: 'EUR'
+                currency: 'HNL',
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
             }).format(amount);
         };
 
@@ -921,7 +971,17 @@
                 .reduce((sum, t) => sum + t.monto, 0);
             const balance = totalIngresos - totalGastos;
 
+            const gastosPorCategoria = {};
+            transactions
+                .filter(t => t.tipo === 'Gasto')
+                .forEach(t => {
+                    const cat = t.categoria?.nombre || 'Otros';
+                    gastosPorCategoria[cat] = (gastosPorCategoria[cat] || 0) + t.monto;
+                });
+
             const lastTransactions = transactions.slice(-5).reverse();
+
+            const hasGastos = Object.keys(gastosPorCategoria).length > 0;
 
             return `
                 <h1 class="page-title">Dashboard</h1>
@@ -945,6 +1005,25 @@
                         </div>
                     </div>
                 </div>
+
+                ${hasGastos ? `
+                    <h2 style="margin-top: 32px; margin-bottom: 16px; font-size: 20px;">Distribución de Gastos</h2>
+                    <div class="dashboard-grid">
+                        <div class="card chart-card">
+                            <div class="chart-card__title">Gastos por Categoría</div>
+                            <div class="chart-container">
+                                <canvas id="gastos-chart"></canvas>
+                            </div>
+                        </div>
+                        <div class="card chart-card">
+                            <div class="chart-card__title">Ingresos vs Gastos</div>
+                            <div class="chart-container chart-container--bar">
+                                <canvas id="comparacion-chart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                ` : ''}
+
                 <h2 style="margin-top: 32px; margin-bottom: 16px; font-size: 20px;">Últimos Movimientos</h2>
                 ${lastTransactions.length > 0 ? `
                     <div class="transaction-list">
@@ -1328,6 +1407,7 @@
             switch (state.currentView) {
                 case 'home':
                     main.innerHTML = renderHomeView();
+                    setTimeout(initGastosChart, 100);
                     break;
                 case 'add-transaction':
                     main.innerHTML = renderAddTransactionView();
@@ -1384,6 +1464,142 @@
         const closeModal = () => {
             const overlay = document.getElementById('modal-overlay');
             overlay.classList.remove('modal-overlay--active');
+        };
+
+        let gastosChart = null;
+        let comparacionChart = null;
+
+        const initGastosChart = () => {
+            const canvas = document.getElementById('gastos-chart');
+            const canvasComparacion = document.getElementById('comparacion-chart');
+
+            const transactions = store.getState().transactions;
+
+            if (canvas) {
+                if (gastosChart) {
+                    gastosChart.destroy();
+                }
+
+                const gastosPorCategoria = {};
+                transactions
+                    .filter(t => t.tipo === 'Gasto')
+                    .forEach(t => {
+                        const cat = t.categoria?.nombre || 'Otros';
+                        gastosPorCategoria[cat] = (gastosPorCategoria[cat] || 0) + t.monto;
+                    });
+
+                const labels = Object.keys(gastosPorCategoria);
+                const data = Object.values(gastosPorCategoria);
+
+                const colors = [
+                    '#4CC9F0', '#F5C518', '#22C55E', '#EAB308', '#EF4444', '#60A5FA',
+                    '#8B5CF6', '#EC4899', '#14B8A6', '#F97316'
+                ];
+
+                gastosChart = new Chart(canvas, {
+                    type: 'doughnut',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: data,
+                            backgroundColor: colors.slice(0, labels.length),
+                            borderWidth: 0,
+                            hoverOffset: 10
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                                titleColor: '#E5E7EB',
+                                bodyColor: '#9CA3AF',
+                                borderColor: 'rgba(255,255,255,0.12)',
+                                borderWidth: 1,
+                                cornerRadius: 12,
+                                padding: 12,
+                                callbacks: {
+                                    label: (context) => {
+                                        const value = context.parsed;
+                                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                        const percentage = ((value / total) * 100).toFixed(1);
+                                        return `${formatCurrency(value)} (${percentage}%)`;
+                                    }
+                                }
+                            }
+                        },
+                        cutout: '60%'
+                    }
+                });
+            }
+
+            if (canvasComparacion) {
+                if (comparacionChart) {
+                    comparacionChart.destroy();
+                }
+
+                const totalIngresos = transactions
+                    .filter(t => t.tipo === 'Ingreso')
+                    .reduce((sum, t) => sum + t.monto, 0);
+
+                const totalGastos = transactions
+                    .filter(t => t.tipo === 'Gasto')
+                    .reduce((sum, t) => sum + t.monto, 0);
+
+                comparacionChart = new Chart(canvasComparacion, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Ingresos', 'Gastos'],
+                        datasets: [{
+                            data: [totalIngresos, totalGastos],
+                            backgroundColor: ['#22C55E', '#EF4444'],
+                            borderRadius: 12,
+                            borderSkipped: false,
+                            barThickness: 60
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                                titleColor: '#E5E7EB',
+                                bodyColor: '#9CA3AF',
+                                borderColor: 'rgba(255,255,255,0.12)',
+                                borderWidth: 1,
+                                cornerRadius: 12,
+                                padding: 12,
+                                callbacks: {
+                                    label: (context) => formatCurrency(context.parsed.y)
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: {
+                                    color: 'rgba(255,255,255,0.1)'
+                                },
+                                ticks: {
+                                    color: '#9CA3AF',
+                                    callback: (value) => formatCurrency(value)
+                                }
+                            },
+                            x: {
+                                grid: { display: false },
+                                ticks: {
+                                    color: '#E5E7EB',
+                                    font: { weight: '600' }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
         };
 
         const init = () => {
