@@ -181,7 +181,8 @@
 
         .form-input,
         .form-select,
-        .form-textarea {
+        .form-textarea,
+        input[type="datetime-local"] {
             width: 100%;
             height: 40px;
             padding: 0 16px;
@@ -193,6 +194,202 @@
             font-family: inherit;
             transition: var(--transition-fast);
             cursor: pointer;
+        }
+
+        input[type="datetime-local"] {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239CA3AF' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='18' rx='2' ry='2'%3E%3C/rect%3E%3Cline x1='16' y1='2' x2='16' y2='6'%3E%3C/line%3E%3Cline x1='8' y1='2' x2='8' y2='6'%3E%3C/line%3E%3Cline x1='3' y1='10' x2='21' y2='10'%3E%3C/line%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            padding-right: 40px;
+        }
+
+        input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+            filter: invert(0.7);
+            cursor: pointer;
+        }
+
+        input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
+            filter: invert(0.9);
+        }
+
+        .date-picker-wrapper {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .date-picker-input {
+            width: 100%;
+            height: 40px;
+            padding: 0 16px;
+            padding-right: 40px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-size: 14px;
+            font-family: inherit;
+            cursor: pointer;
+            transition: var(--transition-fast);
+        }
+
+        .date-picker-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(76,201,240,0.4);
+        }
+
+        .date-picker-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .date-picker-icon {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+            color: var(--text-muted);
+        }
+
+        .date-picker-dropdown {
+            display: none;
+            position: absolute;
+            top: calc(100% + 8px);
+            left: 0;
+            z-index: 1000;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            box-shadow: var(--shadow-xl);
+            padding: 16px;
+            min-width: 300px;
+        }
+
+        .date-picker-dropdown--active {
+            display: block;
+            animation: fadeIn 0.2s ease;
+        }
+
+        .date-picker-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .date-picker-month {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .date-picker-nav {
+            display: flex;
+            gap: 8px;
+        }
+
+        .date-picker-nav-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition-fast);
+        }
+
+        .date-picker-nav-btn:hover {
+            background: rgba(255,255,255,0.1);
+            color: var(--text-primary);
+        }
+
+        .date-picker-weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+            margin-bottom: 8px;
+        }
+
+        .date-picker-weekday {
+            text-align: center;
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            padding: 8px 0;
+        }
+
+        .date-picker-days {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+        }
+
+        .date-picker-day {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: var(--transition-fast);
+            color: var(--text-primary);
+        }
+
+        .date-picker-day:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
+        .date-picker-day--other {
+            color: var(--text-muted);
+        }
+
+        .date-picker-day--today {
+            border: 1px solid var(--primary);
+        }
+
+        .date-picker-day--selected {
+            background: var(--primary);
+            color: var(--bg);
+        }
+
+        .date-picker-time {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border);
+        }
+
+        .date-picker-time-label {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .date-picker-time-input {
+            width: 70px;
+            height: 32px;
+            padding: 0 8px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 14px;
+            font-family: inherit;
+            text-align: center;
+        }
+
+        .date-picker-time-input:focus {
+            outline: none;
+            border-color: var(--primary);
         }
 
         .form-select {
@@ -1250,7 +1447,11 @@
 
                         <div class="form-group">
                             <label class="form-label" for="fecha">Fecha y Hora *</label>
-                            <input type="datetime-local" id="fecha" class="form-input" value="${today}" required>
+                            <div class="date-picker-wrapper">
+                                <input type="text" id="fecha" class="date-picker-input" placeholder="Seleccionar fecha y hora" value="${today}" readonly>
+                                <span class="date-picker-icon">📅</span>
+                                <div class="date-picker-dropdown" id="fecha-dropdown"></div>
+                            </div>
                         </div>
 
                         <div class="form-group">
@@ -1320,7 +1521,11 @@
 
                         <div class="form-group">
                             <label class="form-label" for="fecha">Fecha y Hora *</label>
-                            <input type="datetime-local" id="fecha" class="form-input" value="${transaction.fecha.includes('T') ? transaction.fecha : transaction.fecha + 'T10:00'}" required>
+                            <div class="date-picker-wrapper">
+                                <input type="text" id="fecha" class="date-picker-input" placeholder="Seleccionar fecha y hora" value="${transaction.fecha.includes('T') ? transaction.fecha : transaction.fecha + 'T10:00'}" readonly>
+                                <span class="date-picker-icon">📅</span>
+                                <div class="date-picker-dropdown" id="fecha-dropdown"></div>
+                            </div>
                         </div>
 
                         <div class="form-group">
@@ -1659,6 +1864,12 @@
                 case 'add-transaction':
                     main.innerHTML = renderAddTransactionView();
                     document.getElementById('transaction-form').addEventListener('submit', handleFormSubmit);
+                    setTimeout(() => {
+                        DatePicker.init(
+                            document.getElementById('fecha'),
+                            document.getElementById('fecha-dropdown')
+                        );
+                    }, 100);
                     break;
                 case 'history':
                     main.innerHTML = renderHistoryView();
@@ -1667,6 +1878,12 @@
                     main.innerHTML = renderEditTransactionView();
                     if (state.editingId) {
                         document.getElementById('transaction-form').addEventListener('submit', (e) => handleEditFormSubmit(e, state.editingId));
+                        setTimeout(() => {
+                            DatePicker.init(
+                                document.getElementById('fecha'),
+                                document.getElementById('fecha-dropdown')
+                            );
+                        }, 100);
                     }
                     break;
                 default:
@@ -1848,6 +2065,157 @@
                 });
             }
         };
+
+        const DatePicker = (() => {
+            let currentMonth = new Date().getMonth();
+            let currentYear = new Date().getFullYear();
+            let selectedDate = null;
+            let selectedHour = 10;
+            let selectedMinute = 0;
+            let inputElement = null;
+            let dropdownElement = null;
+            let onSelectCallback = null;
+
+            const weekDays = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+
+            const formatDateForInput = (date, hour, minute) => {
+                const y = date.getFullYear();
+                const m = String(date.getMonth() + 1).padStart(2, '0');
+                const d = String(date.getDate()).padStart(2, '0');
+                const h = String(hour).padStart(2, '0');
+                const min = String(minute).padStart(2, '0');
+                return `${y}-${m}-${d}T${h}:${min}`;
+            };
+
+            const formatDisplayDate = (dateStr) => {
+                if (!dateStr) return '';
+                const date = new Date(dateStr);
+                return date.toLocaleDateString('es-ES', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            };
+
+            const render = () => {
+                const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+                
+                const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+                const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+                const daysInPrevMonth = new Date(currentYear, currentMonth, 0).getDate();
+
+                const today = new Date();
+                let daysHtml = '';
+
+                for (let i = firstDay - 1; i >= 0; i--) {
+                    const day = daysInPrevMonth - i;
+                    daysHtml += `<div class="date-picker-day date-picker-day--other">${day}</div>`;
+                }
+
+                for (let day = 1; day <= daysInMonth; day++) {
+                    const date = new Date(currentYear, currentMonth, day);
+                    const isToday = date.toDateString() === today.toDateString();
+                    const isSelected = selectedDate && date.toDateString() === selectedDate.toDateString();
+                    daysHtml += `<div class="date-picker-day ${isToday ? 'date-picker-day--today' : ''} ${isSelected ? 'date-picker-day--selected' : ''}" data-day="${day}">${day}</div>`;
+                }
+
+                const remainingDays = 42 - (firstDay + daysInMonth);
+                for (let i = 1; i <= remainingDays; i++) {
+                    daysHtml += `<div class="date-picker-day date-picker-day--other">${i}</div>`;
+                }
+
+                dropdownElement.innerHTML = `
+                    <div class="date-picker-header">
+                        <button type="button" class="date-picker-nav-btn" id="prev-month">‹</button>
+                        <span class="date-picker-month">${monthNames[currentMonth]} ${currentYear}</span>
+                        <button type="button" class="date-picker-nav-btn" id="next-month">›</button>
+                    </div>
+                    <div class="date-picker-weekdays">
+                        ${weekDays.map(d => `<div class="date-picker-weekday">${d}</div>`).join('')}
+                    </div>
+                    <div class="date-picker-days" id="date-picker-days">${daysHtml}</div>
+                    <div class="date-picker-time">
+                        <span class="date-picker-time-label">Hora:</span>
+                        <input type="number" class="date-picker-time-input" id="picker-hour" value="${String(selectedHour).padStart(2, '0')}" min="0" max="23">
+                        <span style="color: var(--text-muted);">:</span>
+                        <input type="number" class="date-picker-time-input" id="picker-minute" value="${String(selectedMinute).padStart(2, '0')}" min="0" max="59">
+                    </div>
+                `;
+
+                dropdownElement.onclick = (e) => {
+                    e.stopPropagation();
+                    const target = e.target;
+
+                    if (target.id === 'prev-month') {
+                        currentMonth--;
+                        if (currentMonth < 0) { currentMonth = 11; currentYear--; }
+                        render();
+                    } else if (target.id === 'next-month') {
+                        currentMonth++;
+                        if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+                        render();
+                    } else if (target.classList.contains('date-picker-day') && !target.classList.contains('date-picker-day--other')) {
+                        selectedDate = new Date(currentYear, currentMonth, parseInt(target.dataset.day));
+                        render();
+                        updateInputValue();
+                    }
+                };
+
+                dropdownElement.onchange = (e) => {
+                    e.stopPropagation();
+                    if (e.target.id === 'picker-hour') {
+                        selectedHour = Math.max(0, Math.min(23, parseInt(e.target.value) || 0));
+                        e.target.value = String(selectedHour).padStart(2, '0');
+                        updateInputValue();
+                    } else if (e.target.id === 'picker-minute') {
+                        selectedMinute = Math.max(0, Math.min(59, parseInt(e.target.value) || 0));
+                        e.target.value = String(selectedMinute).padStart(2, '0');
+                        updateInputValue();
+                    }
+                };
+            };
+
+            const updateInputValue = () => {
+                if (inputElement && selectedDate) {
+                    inputElement.value = formatDateForInput(selectedDate, selectedHour, selectedMinute);
+                    if (onSelectCallback) onSelectCallback(inputElement.value);
+                }
+            };
+
+            return {
+                init: (inputEl, dropdownEl, onSelect) => {
+                    inputElement = inputEl;
+                    dropdownElement = dropdownEl;
+                    onSelectCallback = onSelect;
+
+                    const initialValue = inputElement.value;
+                    if (initialValue && initialValue.includes('T')) {
+                        const [datePart, timePart] = initialValue.split('T');
+                        const [y, m, d] = datePart.split('-').map(Number);
+                        selectedDate = new Date(y, m - 1, d);
+                        currentMonth = selectedDate.getMonth();
+                        currentYear = selectedDate.getFullYear();
+                        const [h, min] = timePart.split(':').map(Number);
+                        selectedHour = h;
+                        selectedMinute = min;
+                    }
+
+                    inputElement.addEventListener('click', () => {
+                        document.querySelectorAll('.date-picker-dropdown').forEach(d => d.classList.remove('date-picker-dropdown--active'));
+                        dropdownElement.classList.add('date-picker-dropdown--active');
+                        render();
+                    });
+
+                    document.addEventListener('click', (e) => {
+                        if (!inputElement.contains(e.target) && !dropdownElement.contains(e.target)) {
+                            dropdownElement.classList.remove('date-picker-dropdown--active');
+                        }
+                    });
+                }
+            };
+        })();
 
         const init = () => {
             window.addEventListener('hashchange', handleRoute);
