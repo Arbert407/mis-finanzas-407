@@ -506,6 +506,49 @@
             }
         }
 
+        .filter-bar {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .filter-btn {
+            padding: 10px 20px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition-fast);
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+        }
+
+        .filter-btn:hover {
+            background: rgba(255,255,255,0.1);
+            color: var(--text-primary);
+        }
+
+        .filter-btn--active {
+            background: var(--primary);
+            color: var(--bg);
+            border-color: var(--primary);
+        }
+
+        .filter-btn--active:hover {
+            background: var(--primary-dark);
+        }
+
+        .filter-btn--ingreso.filter-btn--active {
+            background: var(--success);
+            border-color: var(--success);
+        }
+
+        .filter-btn--gasto.filter-btn--active {
+            background: var(--danger);
+            border-color: var(--danger);
+        }
+
         .transaction-item__row {
             display: flex;
             justify-content: space-between;
@@ -880,51 +923,55 @@
                 { id: 'i6', nombre: 'Otros', icono: '💰' }
             ],
             selectedType: 'Gasto',
+            historyFilter: 'all',
             currentView: 'home'
         };
 
         /**
-         * Carga el estado desde localStorage
-         * @returns {Object} Estado cargado
+         * MÓDULO DE PERSISTENCIA (DataService)
+         * Abstracción para permitir cambio a API externa en el futuro
          */
-        const loadState = () => {
-            try {
-                const saved = localStorage.getItem('lifestats-state');
-                if (saved) {
-                    const parsed = JSON.parse(saved);
-                    if (!parsed.categoriesGasto) {
-                        parsed.categoriesGasto = initialState.categoriesGasto;
-                    }
-                    if (!parsed.categoriesIngreso) {
-                        parsed.categoriesIngreso = initialState.categoriesIngreso;
-                    }
-                    if (!parsed.selectedType) {
-                        parsed.selectedType = 'Gasto';
-                    }
-                    return parsed;
+        const DataService = (() => {
+            const STORAGE_KEY = 'lifestats-data';
+
+            const getStorage = () => {
+                try {
+                    return localStorage.getItem(STORAGE_KEY);
+                } catch (e) {
+                    console.error('Error leyendo storage:', e);
+                    return null;
                 }
-                return null;
-            } catch (e) {
-                return null;
-            }
-        };
+            };
 
-        /**
-         * Guarda el estado en localStorage
-         * @param {Object} state - Estado a guardar
-         */
-        const saveState = (state) => {
-            try {
-                localStorage.setItem('lifestats-state', JSON.stringify(state));
-            } catch (e) {
-                console.error('Error guardando estado:', e);
-            }
-        };
+            const setStorage = (data) => {
+                try {
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+                } catch (e) {
+                    console.error('Error guardando storage:', e);
+                }
+            };
 
-        const savedState = loadState();
+            return {
+                load: (defaults) => {
+                    const stored = getStorage();
+                    if (stored) {
+                        const parsed = JSON.parse(stored);
+                        if (!parsed.categoriesGasto) parsed.categoriesGasto = defaults.categoriesGasto;
+                        if (!parsed.categoriesIngreso) parsed.categoriesIngreso = defaults.categoriesIngreso;
+                        if (!parsed.selectedType) parsed.selectedType = 'Gasto';
+                        if (!parsed.historyFilter) parsed.historyFilter = 'all';
+                        return parsed;
+                    }
+                    return null;
+                },
+                save: (data) => setStorage(data)
+            };
+        })();
+
+        const savedState = DataService.load(initialState);
         const store = createStore(savedState || initialState);
 
-        store.subscribe(saveState);
+        store.subscribe(DataService.save);
 
         /**
          * Generador de ID único
@@ -1302,6 +1349,12 @@
 
             return `
                 <h1 class="page-title">Historial de Movimientos</h1>
+                <div class="filter-bar">
+                    <button class="filter-btn filter-btn--active" onclick="filterByType('all')" id="filter-all">Todos</button>
+                    <button class="filter-btn filter-btn--ingreso" onclick="filterByType('Ingreso')" id="filter-Ingreso">Ingresos</button>
+                    <button class="filter-btn filter-btn--gasto" onclick="filterByType('Gasto')" id="filter-Gasto">Gastos</button>
+                </div>
+                <div id="filtered-transactions">
                 ${transactions.length > 0 ? `
                     <div class="card">
                         <table class="transactions-table">
@@ -1342,7 +1395,79 @@
                         </div>
                     </div>
                 `}
+                </div>
             `;
+        };
+
+        /**
+         * Filtra el historial por tipo
+         * @param {string} type - Tipo (all, Ingreso, Gasto)
+         */
+        window.filterByType = (type) => {
+            const state = store.getState();
+            store.setState({
+                ...state,
+                historyFilter: type
+            });
+
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('filter-btn--active');
+            });
+            document.getElementById(`filter-${type}`).classList.add('filter-btn--active');
+
+            const container = document.getElementById('filtered-transactions');
+            const transactions = state.transactions;
+            const sorted = [...transactions].sort((a, b) => {
+                const dateA = new Date(a.fecha.includes('T') ? a.fecha : a.fecha + 'T00:00');
+                const dateB = new Date(b.fecha.includes('T') ? b.fecha : b.fecha + 'T00:00');
+                return dateB - dateA;
+            });
+            const filtered = type === 'all' ? sorted : sorted.filter(t => t.tipo === type);
+
+            if (filtered.length > 0) {
+                container.innerHTML = `
+                    <div class="card">
+                        <table class="transactions-table">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Descripción</th>
+                                    <th>Categoría</th>
+                                    <th>Tipo</th>
+                                    <th>Monto</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${filtered.map(t => `
+                                    <tr>
+                                        <td>${formatDate(t.fecha)}</td>
+                                        <td>${t.descripcion || '-'}</td>
+                                        <td><span class="category-badge">${t.categoria?.icono || ''} ${t.categoria?.nombre || '-'}</span></td>
+                                        <td><span class="transaction-item__type transaction-item__type--${t.tipo.toLowerCase()}">${t.tipo}</span></td>
+                                        <td class="transaction-item__amount transaction-item__amount--${t.tipo.toLowerCase()}">${t.tipo === 'Gasto' ? '-' : '+'}${formatCurrency(t.monto)}</td>
+                                        <td>
+                                            <div class="transaction-item__actions">
+                                                <button class="btn--edit" onclick="editTransaction('${t.id}')">Editar</button>
+                                                <button class="btn--delete" onclick="confirmDeleteTransaction('${t.id}')">Eliminar</button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            } else {
+                container.innerHTML = `
+                    <div class="card">
+                        <div class="empty-state">
+                            <div class="empty-state__icon">📋</div>
+                            <div class="empty-state__text">No hay movimientos ${type === 'all' ? '' : `de tipo ${type}`}</div>
+                        </div>
+                    </div>
+                `;
+            }
         };
 
         /**
