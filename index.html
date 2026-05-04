@@ -3,7 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#4CC9F0">
+    <meta name="description" content="SPA de Finanzas Personales">
     <link rel="icon" type="image/png" href="16.png">
+    <link rel="manifest" href="manifest.json">
     <title>Mis Finanzas</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -2288,6 +2291,10 @@
             window.addEventListener('hashchange', handleRoute);
             handleRoute();
         };
+
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js');
+        }
 
         init();
     </script>
