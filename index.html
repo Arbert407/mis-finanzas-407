@@ -627,6 +627,9 @@
 
         /* Transaction List */
         .transaction-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
             margin-top: 24px;
         }
 
@@ -635,9 +638,9 @@
             justify-content: space-between;
             align-items: center;
             padding: 16px;
-            background: rgba(255,255,255,0.03);
+            background: var(--surface);
             border-radius: 12px;
-            margin-bottom: 8px;
+            border: 1px solid var(--border);
         }
 
         .transaction-item__info {
@@ -1338,6 +1341,16 @@
             return `${dateStr2} ${timeStr}`;
         };
 
+        const escapeHtml = (str) => {
+            if (!str) return '';
+            return str.replace(/&/g, '&amp;')
+                     .replace(/</g, '&lt;')
+                     .replace(/>/g, '&gt;')
+                     .replace(/"/g, '&quot;')
+                     .replace(/'/g, '&#039;');
+        };
+        };
+
         /**
          * Formatea monto como moneda
          * @param {number} amount - Monto a formatear
@@ -1505,7 +1518,7 @@
                                     <div class="transaction-item__amount transaction-item__amount--${t.tipo.toLowerCase()}">
                                         ${t.tipo === 'Gasto' ? '-' : '+'}${formatCurrency(t.monto)}
                                     </div>
-                                    <div class="transaction-item__desc">${t.descripcion || 'Sin descripción'}</div>
+                                    <div class="transaction-item__desc">${escapeHtml(t.descripcion) || 'Sin descripción'}</div>
                                 </div>
                                 <div style="text-align: right;">
                                     <div class="transaction-item__category">${t.categoria?.icono || ''} ${t.categoria?.nombre || ''}</div>
@@ -1708,7 +1721,7 @@
                                 ${sorted.map(t => `
                                     <tr>
                                         <td data-label="Fecha">${formatDate(t.fecha)}</td>
-                                        <td data-label="Descripción">${t.descripcion || '-'}</td>
+                                        <td data-label="Descripción">${escapeHtml(t.descripcion) || '-'}</td>
                                         <td data-label="Categoría"><span class="category-badge">${t.categoria?.icono || ''}<span class="category-name"> ${t.categoria?.nombre || '-'}</span></span></td>
                                         <td data-label="Tipo"><span class="transaction-item__type transaction-item__type--${t.tipo.toLowerCase()}">${t.tipo}</span></td>
                                         <td data-label="Monto" class="transaction-item__amount transaction-item__amount--${t.tipo.toLowerCase()}">${t.tipo === 'Gasto' ? '-' : '+'}${formatCurrency(t.monto)}</td>
@@ -1776,7 +1789,7 @@
                                 ${filtered.map(t => `
                                     <tr>
                                         <td data-label="Fecha">${formatDate(t.fecha)}</td>
-                                        <td data-label="Descripción">${t.descripcion || '-'}</td>
+                                        <td data-label="Descripción">${escapeHtml(t.descripcion) || '-'}</td>
                                         <td data-label="Categoría"><span class="category-badge">${t.categoria?.icono || ''}<span class="category-name"> ${t.categoria?.nombre || '-'}</span></span></td>
                                         <td data-label="Tipo"><span class="transaction-item__type transaction-item__type--${t.tipo.toLowerCase()}">${t.tipo}</span></td>
                                         <td data-label="Monto" class="transaction-item__amount transaction-item__amount--${t.tipo.toLowerCase()}">${t.tipo === 'Gasto' ? '-' : '+'}${formatCurrency(t.monto)}</td>
