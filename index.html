@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mis Finanzas</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #4CC9F0;
+            --primary-dark: #3AA7CC;
+            --secondary: #F5C518;
+            --success: #22C55E;
+            --warning: #EAB308;
+            --danger: #EF4444;
+            --info: #60A5FA;
+
+            --bg: #0F172A;
+            --surface: rgba(255,255,255,0.08);
+            --text-primary: #E5E7EB;
+            --text-secondary: #9CA3AF;
+            --text-muted: #6B7280;
+            --border: rgba(255,255,255,0.12);
+
+            --transition-fast: all 0.15s ease-out;
+            --transition-normal: all 0.3s ease;
+            --transition-slow: all 0.5s ease;
+
+            --shadow-sm: 0 2px 8px rgba(0,0,0,0.2);
+            --shadow-md: 0 8px 24px rgba(0,0,0,0.3);
+            --shadow-lg: 0 12px 40px rgba(0,0,0,0.4);
+        }
+
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.5;
+            font-size: 14px;
+        }
+
+        .app {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 0 16px;
+        }
+
+        @media (min-width: 768px) {
+            .container {
+                padding: 0 24px;
+            }
+        }
+
+        /* Header */
+        .header {
+            background: var(--surface);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+            padding: 16px 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header__content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header__logo {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--primary);
+            text-decoration: none;
+            letter-spacing: -0.3px;
+        }
+
+        .nav {
+            display: flex;
+            gap: 8px;
+        }
+
+        .nav__link {
+            padding: 8px 16px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            border-radius: 12px;
+            transition: var(--transition-fast);
+            font-weight: 500;
+        }
+
+        .nav__link:hover {
+            background: var(--surface);
+            color: var(--text-primary);
+        }
+
+        .nav__link--active {
+            background: var(--primary);
+            color: var(--bg);
+        }
+
+        .nav__link--active:hover {
+            background: var(--primary-dark);
+            color: var(--bg);
+        }
+
+        /* Main */
+        .main {
+            flex: 1;
+            padding: 24px 0;
+        }
+
+        /* Page Title */
+        .page-title {
+            font-size: 32px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            margin-bottom: 24px;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--surface);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            box-shadow: var(--shadow-md);
+            padding: 24px;
+            transition: var(--transition-normal);
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .card--form {
+            max-width: 500px;
+        }
+
+        .card__title {
+            font-size: 20px;
+            font-weight: 600;
+            letter-spacing: -0.2px;
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+
+        /* Forms */
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            letter-spacing: 0.2px;
+            text-transform: uppercase;
+        }
+
+        .form-input,
+        .form-select,
+        .form-textarea {
+            width: 100%;
+            height: 40px;
+            padding: 0 16px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-size: 14px;
+            font-family: inherit;
+            transition: var(--transition-fast);
+            cursor: pointer;
+        }
+
+        .form-select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239CA3AF' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            padding-right: 40px;
+        }
+
+        .form-select option {
+            background: var(--bg);
+            color: var(--text-primary);
+            padding: 12px;
+        }
+
+        .form-select option:hover {
+            background: var(--primary);
+            color: var(--bg);
+        }
+
+        .form-textarea {
+            height: 80px;
+            padding: 12px 16px;
+            resize: vertical;
+        }
+
+        .form-input:focus,
+        .form-select:focus,
+        .form-textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(76,201,240,0.4);
+        }
+
+        .form-input::placeholder,
+        .form-textarea::placeholder {
+            color: var(--text-muted);
+        }
+
+        .form-input--error,
+        .form-select--error,
+        .form-textarea--error {
+            border-color: var(--danger);
+        }
+
+        .form-error {
+            font-size: 12px;
+            color: var(--danger);
+            margin-top: 4px;
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition-fast);
+            font-family: inherit;
+        }
+
+        .btn:active {
+            transform: scale(0.97);
+        }
+
+        .btn--primary {
+            background: var(--primary);
+            color: var(--bg);
+        }
+
+        .btn--primary:hover {
+            background: var(--primary-dark);
+            box-shadow: 0 4px 12px rgba(76,201,240,0.4);
+        }
+
+        .btn--secondary {
+            background: #1F2937;
+            color: var(--text-primary);
+        }
+
+        .btn--secondary:hover {
+            background: #374151;
+        }
+
+        .btn--danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn--danger:hover {
+            background: #DC2626;
+        }
+
+        .btn--full {
+            width: 100%;
+        }
+
+        /* Type Selector */
+        .type-selector {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .type-btn {
+            flex: 1;
+            padding: 16px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: var(--transition-fast);
+            text-align: center;
+        }
+
+        .type-btn:hover {
+            background: rgba(255,255,255,0.1);
+            color: var(--text-primary);
+        }
+
+        .type-btn--active {
+            border-color: var(--primary);
+            background: rgba(76,201,240,0.15);
+            color: var(--primary);
+        }
+
+        .type-btn--gasto.type-btn--active {
+            background: rgba(239,68,68,0.15);
+            color: var(--danger);
+            border-color: var(--danger);
+        }
+
+        .type-btn--ingreso.type-btn--active {
+            background: rgba(34,197,94,0.15);
+            color: var(--success);
+            border-color: var(--success);
+        }
+
+        .type-btn--ingreso.type-btn--active {
+            background: rgba(34,197,94,0.15);
+            color: var(--success);
+            border-color: var(--success);
+        }
+
+        .type-btn__icon {
+            font-size: 24px;
+            margin-bottom: 4px;
+            display: block;
+        }
+
+        .type-btn__label {
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        /* Alert/Toast */
+        .alert {
+            padding: 12px 16px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            font-size: 14px;
+        }
+
+        .alert--success {
+            background: rgba(34,197,94,0.15);
+            border: 1px solid var(--success);
+            color: var(--success);
+        }
+
+        .alert--error {
+            background: rgba(239,68,68,0.15);
+            border: 1px solid var(--danger);
+            color: var(--danger);
+        }
+
+        /* Transaction List */
+        .transaction-list {
+            margin-top: 24px;
+        }
+
+        .transaction-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 12px;
+            margin-bottom: 8px;
+        }
+
+        .transaction-item__info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .transaction-item__amount {
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .transaction-item__amount--gasto {
+            color: var(--danger);
+        }
+
+        .transaction-item__amount--ingreso {
+            color: var(--success);
+        }
+
+        .transaction-item__desc {
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        .transaction-item__category {
+            font-size: 12px;
+            color: var(--text-muted);
+            background: var(--surface);
+            padding: 4px 8px;
+            border-radius: 6px;
+        }
+
+        .transaction-item__date {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        /* Dashboard */
+        .dashboard-grid {
+            display: grid;
+            gap: 24px;
+            margin-top: 24px;
+        }
+
+        @media (min-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .balance-card {
+            text-align: center;
+            padding: 32px;
+        }
+
+        .balance-card__label {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .balance-card__amount {
+            font-size: 36px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .balance-card__amount--positive {
+            color: var(--success);
+        }
+
+        .balance-card__amount--negative {
+            color: var(--danger);
+        }
+
+        /* Loading */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            color: var(--text-muted);
+        }
+
+        .loading::after {
+            content: '';
+            width: 24px;
+            height: 24px;
+            border: 2px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-left: 12px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Footer */
+        .footer {
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            padding: 16px 0;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 12px;
+        }
+
+        /* View transitions */
+        .view {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .view--active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-muted);
+        }
+
+        .empty-state__icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .empty-state__text {
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="app" id="app">
+        <!-- Header rendered by router -->
+        <header class="header">
+            <div class="container header__content">
+                <a href="#/" class="header__logo">Mis Finanzas</a>
+                <nav class="nav" id="nav"></nav>
+            </div>
+        </header>
+
+        <main class="main">
+            <div class="container" id="main-content">
+                <!-- Views rendered here -->
+            </div>
+        </main>
+
+        <footer class="footer">
+            <div class="container">
+                © 2026 Alejandro Claros - Finanzas Personales
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        /**
+         * Estado global de la aplicación
+         * Maneja el estado de forma inmutable
+         */
+        const createStore = (initialState) => {
+            let state = initialState;
+            const listeners = [];
+
+            return {
+                getState: () => state,
+                setState: (newState) => {
+                    state = newState;
+                    listeners.forEach(fn => fn(state));
+                },
+                subscribe: (listener) => {
+                    listeners.push(listener);
+                    return () => {
+                        const idx = listeners.indexOf(listener);
+                        if (idx > -1) listeners.splice(idx, 1);
+                    };
+                }
+            };
+        };
+
+        /**
+         * Estado inicial
+         */
+        const initialState = {
+            transactions: [],
+            categoriesGasto: [
+                { id: 'g1', nombre: 'Alimentación', icono: '🍔' },
+                { id: 'g2', nombre: 'Transporte', icono: '🚗' },
+                { id: 'g3', nombre: 'Entretenimiento', icono: '🎮' },
+                { id: 'g4', nombre: 'Servicios', icono: '💡' },
+                { id: 'g5', nombre: 'Salud', icono: '🏥' },
+                { id: 'g6', nombre: 'Otros', icono: '📦' }
+            ],
+            categoriesIngreso: [
+                { id: 'i1', nombre: 'Salario', icono: '💼' },
+                { id: 'i2', nombre: 'Bonificación', icono: '🎁' },
+                { id: 'i3', nombre: 'Inversión', icono: '📈' },
+                { id: 'i4', nombre: 'Regalo', icono: '🎀' },
+                { id: 'i5', nombre: 'Dividendos', icono: '💵' },
+                { id: 'i6', nombre: 'Otros', icono: '💰' }
+            ],
+            selectedType: 'Gasto',
+            currentView: 'home'
+        };
+
+        /**
+         * Carga el estado desde localStorage
+         * @returns {Object} Estado cargado
+         */
+        const loadState = () => {
+            try {
+                const saved = localStorage.getItem('lifestats-state');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    if (!parsed.categoriesGasto) {
+                        parsed.categoriesGasto = initialState.categoriesGasto;
+                    }
+                    if (!parsed.categoriesIngreso) {
+                        parsed.categoriesIngreso = initialState.categoriesIngreso;
+                    }
+                    if (!parsed.selectedType) {
+                        parsed.selectedType = 'Gasto';
+                    }
+                    return parsed;
+                }
+                return null;
+            } catch (e) {
+                return null;
+            }
+        };
+
+        /**
+         * Guarda el estado en localStorage
+         * @param {Object} state - Estado a guardar
+         */
+        const saveState = (state) => {
+            try {
+                localStorage.setItem('lifestats-state', JSON.stringify(state));
+            } catch (e) {
+                console.error('Error guardando estado:', e);
+            }
+        };
+
+        const savedState = loadState();
+        const store = createStore(savedState || initialState);
+
+        store.subscribe(saveState);
+
+        /**
+         * Generador de ID único
+         * @returns {string} UUID
+         */
+        const generateId = () => {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+                const r = Math.random() * 16 | 0;
+                const v = c === 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        };
+
+        /**
+         * Validación de monto (RN-001)
+         * @param {string|number} value - Valor del monto
+         * @returns {Object} { valid: boolean, error?: string }
+         */
+        const validateMonto = (value) => {
+            const num = parseFloat(value);
+            if (isNaN(num) || num <= 0) {
+                return { valid: false, error: 'El monto debe ser mayor a 0' };
+            }
+            return { valid: true };
+        };
+
+        /**
+         * Formatea fecha para mostrar
+         * @param {string} dateStr - Fecha en formato ISO
+         * @returns {string} Fecha formateada
+         */
+        const formatDate = (dateStr) => {
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('es-ES', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric'
+            });
+        };
+
+        /**
+         * Formatea monto como moneda
+         * @param {number} amount - Monto a formatear
+         * @returns {string} Monto formateado
+         */
+        const formatCurrency = (amount) => {
+            return new Intl.NumberFormat('es-ES', {
+                style: 'currency',
+                currency: 'EUR'
+            }).format(amount);
+        };
+
+        /**
+         * Router - Navegación SPA
+         */
+        const routes = {
+            '/': 'home',
+            '/agregar': 'add-transaction',
+            '/historial': 'history'
+        };
+
+        /**
+         * Obtiene la ruta actual del hash
+         * @returns {string} Ruta actual
+         */
+        const getCurrentRoute = () => {
+            const hash = window.location.hash.slice(1) || '/';
+            return hash;
+        };
+
+        /**
+         * Navega a una ruta
+         * @param {string} path - Ruta destino
+         */
+        const navigate = (path) => {
+            window.location.hash = path;
+        };
+
+        /**
+         * Maneja cambios de ruta
+         */
+        const handleRoute = () => {
+            const path = getCurrentRoute();
+            const viewName = routes[path] || 'home';
+
+            store.setState({
+                ...store.getState(),
+                currentView: viewName
+            });
+
+            render();
+        };
+
+        /**
+         * Renderiza el nav según la vista actual
+         */
+        const renderNav = () => {
+            const nav = document.getElementById('nav');
+            const currentView = store.getState().currentView;
+
+            nav.innerHTML = `
+                <a href="#/" class="nav__link ${currentView === 'home' ? 'nav__link--active' : ''}">Inicio</a>
+                <a href="#/agregar" class="nav__link ${currentView === 'add-transaction' ? 'nav__link--active' : ''}">Agregar</a>
+                <a href="#/historial" class="nav__link ${currentView === 'history' ? 'nav__link--active' : ''}">Historial</a>
+            `;
+        };
+
+        /**
+         * Vista: Home
+         */
+        const renderHomeView = () => {
+            const transactions = store.getState().transactions;
+            const totalIngresos = transactions
+                .filter(t => t.tipo === 'Ingreso')
+                .reduce((sum, t) => sum + t.monto, 0);
+            const totalGastos = transactions
+                .filter(t => t.tipo === 'Gasto')
+                .reduce((sum, t) => sum + t.monto, 0);
+            const balance = totalIngresos - totalGastos;
+
+            const lastTransactions = transactions.slice(-5).reverse();
+
+            return `
+                <h1 class="page-title">Dashboard</h1>
+                <div class="dashboard-grid">
+                    <div class="card balance-card">
+                        <div class="balance-card__label">Balance Total</div>
+                        <div class="balance-card__amount ${balance >= 0 ? 'balance-card__amount--positive' : 'balance-card__amount--negative'}">
+                            ${formatCurrency(balance)}
+                        </div>
+                    </div>
+                    <div class="card balance-card">
+                        <div class="balance-card__label">Ingresos</div>
+                        <div class="balance-card__amount balance-card__amount--positive">
+                            ${formatCurrency(totalIngresos)}
+                        </div>
+                    </div>
+                    <div class="card balance-card">
+                        <div class="balance-card__label">Gastos</div>
+                        <div class="balance-card__amount balance-card__amount--negative">
+                            ${formatCurrency(totalGastos)}
+                        </div>
+                    </div>
+                </div>
+                <h2 style="margin-top: 32px; margin-bottom: 16px; font-size: 20px;">Últimos Movimientos</h2>
+                ${lastTransactions.length > 0 ? `
+                    <div class="transaction-list">
+                        ${lastTransactions.map(t => `
+                            <div class="transaction-item">
+                                <div class="transaction-item__info">
+                                    <div class="transaction-item__amount transaction-item__amount--${t.tipo.toLowerCase()}">
+                                        ${t.tipo === 'Gasto' ? '-' : '+'}${formatCurrency(t.monto)}
+                                    </div>
+                                    <div class="transaction-item__desc">${t.descripcion || 'Sin descripción'}</div>
+                                </div>
+                                <div style="text-align: right;">
+                                    <div class="transaction-item__category">${t.categoria?.icono || ''} ${t.categoria?.nombre || ''}</div>
+                                    <div class="transaction-item__date">${formatDate(t.fecha)}</div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : `
+                    <div class="empty-state">
+                        <div class="empty-state__icon">📊</div>
+                        <div class="empty-state__text">No hay movimientos aún</div>
+                    </div>
+                `}
+            `;
+        };
+
+        /**
+         * Vista: Agregar Transacción
+         */
+        const renderAddTransactionView = () => {
+            const state = store.getState();
+            const selectedType = state.selectedType || 'Gasto';
+            const categories = selectedType === 'Gasto' ? state.categoriesGasto : state.categoriesIngreso;
+            const today = new Date().toISOString().split('T')[0];
+
+            return `
+                <h1 class="page-title">Agregar Movimiento</h1>
+                <div class="card card--form">
+                    <h2 class="card__title">Nuevo Registro</h2>
+                    <form id="transaction-form">
+                        <div class="type-selector">
+                            <button type="button" class="type-btn type-btn--gasto ${selectedType === 'Gasto' ? 'type-btn--active' : ''}" data-type="Gasto" onclick="selectType('Gasto')">
+                                <span class="type-btn__icon">💸</span>
+                                <span class="type-btn__label">Gasto</span>
+                            </button>
+                            <button type="button" class="type-btn type-btn--ingreso ${selectedType === 'Ingreso' ? 'type-btn--active' : ''}" data-type="Ingreso" onclick="selectType('Ingreso')">
+                                <span class="type-btn__icon">💰</span>
+                                <span class="type-btn__label">Ingreso</span>
+                            </button>
+                        </div>
+
+                        <input type="hidden" id="tipo" value="${selectedType}">
+
+                        <div class="form-group">
+                            <label class="form-label" for="monto">Monto *</label>
+                            <input type="number" id="monto" class="form-input" placeholder="0.00" step="0.01" min="0.01" required>
+                            <div id="monto-error" class="form-error"></div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="categoria">Categoría *</label>
+                            <select id="categoria" class="form-select" required>
+                                <option value="">Selecciona una categoría</option>
+                                ${categories.map(c => `
+                                    <option value="${c.id}">${c.icono} ${c.nombre}</option>
+                                `).join('')}
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="fecha">Fecha *</label>
+                            <input type="date" id="fecha" class="form-input" value="${today}" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="descripcion">Descripción</label>
+                            <textarea id="descripcion" class="form-textarea" placeholder="Ej: Cena en restaurante..."></textarea>
+                        </div>
+
+                        <button type="submit" class="btn btn--primary btn--full">Guardar Movimiento</button>
+                    </form>
+                    <div id="form-message"></div>
+                </div>
+            `;
+        };
+
+        /**
+         * Vista: Historial
+         */
+        const renderHistoryView = () => {
+            const transactions = store.getState().transactions;
+            const sorted = [...transactions].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+
+            return `
+                <h1 class="page-title">Historial de Movimientos</h1>
+                ${transactions.length > 0 ? `
+                    <div class="transaction-list">
+                        ${sorted.map(t => `
+                            <div class="transaction-item">
+                                <div class="transaction-item__info">
+                                    <div class="transaction-item__amount transaction-item__amount--${t.tipo.toLowerCase()}">
+                                        ${t.tipo === 'Gasto' ? '-' : '+'}${formatCurrency(t.monto)}
+                                    </div>
+                                    <div class="transaction-item__desc">${t.descripcion || 'Sin descripción'}</div>
+                                </div>
+                                <div style="text-align: right;">
+                                    <div class="transaction-item__category">${t.categoria?.icono || ''} ${t.categoria?.nombre || ''}</div>
+                                    <div class="transaction-item__date">${formatDate(t.fecha)}</div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : `
+                    <div class="card">
+                        <div class="empty-state">
+                            <div class="empty-state__icon">📋</div>
+                            <div class="empty-state__text">No hay movimientos registrados</div>
+                        </div>
+                    </div>
+                `}
+            `;
+        };
+
+        /**
+         * Selecciona tipo de movimiento
+         * @param {string} type - Tipo (Gasto o Ingreso)
+         */
+        window.selectType = (type) => {
+            document.getElementById('tipo').value = type;
+
+            document.querySelectorAll('.type-btn').forEach(btn => {
+                btn.classList.remove('type-btn--active');
+                if (btn.dataset.type === type) {
+                    btn.classList.add('type-btn--active');
+                }
+            });
+
+            store.setState({
+                ...store.getState(),
+                selectedType: type
+            });
+
+            updateCategorySelect(type);
+        };
+
+        const updateCategorySelect = (type) => {
+            const state = store.getState();
+            const categories = type === 'Gasto' ? state.categoriesGasto : state.categoriesIngreso;
+            const select = document.getElementById('categoria');
+            if (select) {
+                select.innerHTML = `
+                    <option value="">Selecciona una categoría</option>
+                    ${categories.map(c => `
+                        <option value="${c.id}">${c.icono} ${c.nombre}</option>
+                    `).join('')}
+                `;
+            }
+        };
+
+        /**
+         * Maneja el envío del formulario
+         */
+        const handleFormSubmit = (e) => {
+            e.preventDefault();
+
+            const montoInput = document.getElementById('monto');
+            const montoError = document.getElementById('monto-error');
+            const formMessage = document.getElementById('form-message');
+
+            const validation = validateMonto(montoInput.value);
+
+            if (!validation.valid) {
+                montoInput.classList.add('form-input--error');
+                montoError.textContent = validation.error;
+                return;
+            }
+
+            montoInput.classList.remove('form-input--error');
+            montoError.textContent = '';
+
+            const tipo = document.getElementById('tipo').value;
+            const monto = parseFloat(montoInput.value);
+            const fecha = document.getElementById('fecha').value;
+            const categoriaId = document.getElementById('categoria').value;
+            const descripcion = document.getElementById('descripcion').value;
+
+            const state = store.getState();
+            const categories = tipo === 'Gasto' ? state.categoriesGasto : state.categoriesIngreso;
+            const categoria = categories.find(c => c.id === categoriaId);
+
+            const newTransaction = {
+                id: generateId(),
+                tipo,
+                monto,
+                fecha,
+                descripcion,
+                categoria
+            };
+
+            const currentTransactions = store.getState().transactions;
+            store.setState({
+                ...store.getState(),
+                transactions: [...currentTransactions, newTransaction]
+            });
+
+            formMessage.innerHTML = '<div class="alert alert--success">Movimiento guardado correctamente</div>';
+
+            setTimeout(() => {
+                navigate('/historial');
+            }, 1500);
+        };
+
+        /**
+         * Renderiza la vista actual
+         */
+        const render = () => {
+            const main = document.getElementById('main-content');
+            const state = store.getState();
+
+            renderNav();
+
+            switch (state.currentView) {
+                case 'home':
+                    main.innerHTML = renderHomeView();
+                    break;
+                case 'add-transaction':
+                    main.innerHTML = renderAddTransactionView();
+                    document.getElementById('transaction-form').addEventListener('submit', handleFormSubmit);
+                    break;
+                case 'history':
+                    main.innerHTML = renderHistoryView();
+                    break;
+                default:
+                    main.innerHTML = renderHomeView();
+            }
+        };
+
+        /**
+         * Inicializa la aplicación
+         */
+        const init = () => {
+            window.addEventListener('hashchange', handleRoute);
+            handleRoute();
+        };
+
+        init();
+    </script>
+</body>
+</html>
