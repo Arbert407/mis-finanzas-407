@@ -1,5 +1,5 @@
-const CACHE_NAME = 'mis-finanzas-v3';
-const VERSION = 'v=3';
+const CACHE_NAME = 'mis-finanzas-v4-' + Date.now();
+const VERSION = 'v=4-' + Date.now();
 
 self.addEventListener('install', (event) => {
     event.waitUntil(
