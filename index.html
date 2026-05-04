@@ -102,6 +102,23 @@
         .nav {
             display: flex;
             gap: 8px;
+            align-items: center;
+        }
+
+        .settings-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 20px;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 8px;
+            transition: var(--transition-fast);
+        }
+
+        .settings-btn:hover {
+            background: var(--surface);
+            color: var(--text-primary);
         }
 
         .nav__link {
@@ -591,6 +608,7 @@
         .alert {
             padding: 12px 16px;
             border-radius: 12px;
+            margin-top: 16px;
             margin-bottom: 16px;
             font-size: 14px;
         }
@@ -1170,6 +1188,7 @@
             <div class="container header__content">
                 <a href="#/" class="header__logo">Mis Finanzas</a>
                 <nav class="nav" id="nav"></nav>
+                <button class="settings-btn" onclick="openSettings()" title="Ajustes">⚙️</button>
             </div>
         </header>
 
@@ -1233,7 +1252,13 @@
                 { id: 'g3', nombre: 'Entretenimiento', icono: '🎮' },
                 { id: 'g4', nombre: 'Servicios', icono: '💡' },
                 { id: 'g5', nombre: 'Salud', icono: '🏥' },
-                { id: 'g6', nombre: 'Otros', icono: '📦' }
+                { id: 'g6', nombre: 'Ropa', icono: '👕' },
+                { id: 'g7', nombre: 'Hogar', icono: '🏠' },
+                { id: 'g8', nombre: 'Educación', icono: '📚' },
+                { id: 'g9', nombre: 'Mascotas', icono: '🐕' },
+                { id: 'g10', nombre: 'Seguros', icono: '🛡️' },
+                { id: 'g11', nombre: 'Impuestos', icono: '📋' },
+                { id: 'g12', nombre: 'Otros', icono: '📦' }
             ],
             categoriesIngreso: [
                 { id: 'i1', nombre: 'Salario', icono: '💼' },
@@ -1241,7 +1266,11 @@
                 { id: 'i3', nombre: 'Inversión', icono: '📈' },
                 { id: 'i4', nombre: 'Regalo', icono: '🎀' },
                 { id: 'i5', nombre: 'Dividendos', icono: '💵' },
-                { id: 'i6', nombre: 'Otros', icono: '💰' }
+                { id: 'i6', nombre: 'Freelance', icono: '💻' },
+                { id: 'i7', nombre: 'Venta', icono: '🏷️' },
+                { id: 'i8', nombre: 'Devolución', icono: '🔙' },
+                { id: 'i9', nombre: 'Premio', icono: '🏆' },
+                { id: 'i10', nombre: 'Otros', icono: '💰' }
             ],
             selectedType: 'Gasto',
             historyFilter: 'all',
@@ -2063,6 +2092,41 @@
         const closeModal = () => {
             const overlay = document.getElementById('modal-overlay');
             overlay.classList.remove('modal-overlay--active');
+        };
+
+        window.openSettings = () => {
+            const titleEl = document.getElementById('modal-title');
+            const contentEl = document.getElementById('modal-content');
+            const cancelBtn = document.getElementById('modal-cancel');
+            const confirmBtn = document.getElementById('modal-confirm');
+
+            titleEl.textContent = 'Ajustes';
+            contentEl.innerHTML = '<div id="settings-content"><button class="btn btn--secondary" style="width: 100%;" onclick="exportData()">Exportar datos</button></div>';
+            cancelBtn.textContent = 'Cerrar';
+            cancelBtn.onclick = closeModal;
+            confirmBtn.style.display = 'none';
+
+            const overlay = document.getElementById('modal-overlay');
+            overlay.classList.add('modal-overlay--active');
+
+            document.querySelector('#settings-content button').onclick = exportData;
+        };
+
+        window.exportData = () => {
+            const state = store.getState();
+            const data = {
+                transactions: state.transactions,
+                categoriesGasto: state.categoriesGasto,
+                categoriesIngreso: state.categoriesIngreso,
+                exportedAt: new Date().toISOString()
+            };
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `mis-finanzas-${new Date().toISOString().slice(0, 10)}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
         };
 
         let gastosChart = null;
