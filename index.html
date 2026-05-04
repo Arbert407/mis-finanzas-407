@@ -427,6 +427,100 @@
             color: var(--text-muted);
         }
 
+        .transaction-item__type {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .transaction-item__type--gasto {
+            background: rgba(239,68,68,0.15);
+            color: var(--danger);
+        }
+
+        .transaction-item__type--ingreso {
+            background: rgba(34,197,94,0.15);
+            color: var(--success);
+        }
+
+        .transactions-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .transactions-table th {
+            text-align: left;
+            padding: 12px 8px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .transactions-table td {
+            padding: 16px 8px;
+            font-size: 14px;
+            color: var(--text-primary);
+            border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+        }
+
+        .transactions-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .transactions-table tr:hover td {
+            background: rgba(255,255,255,0.02);
+        }
+
+        .category-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 13px;
+        }
+
+        .transactions-table .transaction-item__actions {
+            display: flex;
+            gap: 4px;
+        }
+
+        .transactions-table .btn--edit,
+        .transactions-table .btn--delete {
+            padding: 4px 8px;
+            font-size: 11px;
+        }
+
+        @media (max-width: 768px) {
+            .transactions-table th:nth-child(2),
+            .transactions-table td:nth-child(2) {
+                display: none;
+            }
+        }
+
+        .transaction-item__row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .transaction-item__meta {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
         .transaction-item__actions {
             display: flex;
             gap: 8px;
@@ -864,11 +958,17 @@
          */
         const formatDate = (dateStr) => {
             const date = new Date(dateStr);
-            return date.toLocaleDateString('es-ES', {
+            const dateStr2 = date.toLocaleDateString('es-ES', {
                 day: '2-digit',
                 month: 'short',
                 year: 'numeric'
             });
+            const timeStr = date.toLocaleTimeString('es-ES', {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+            });
+            return `${dateStr2} ${timeStr}`;
         };
 
         /**
@@ -979,7 +1079,12 @@
                     gastosPorCategoria[cat] = (gastosPorCategoria[cat] || 0) + t.monto;
                 });
 
-            const lastTransactions = transactions.slice(-5).reverse();
+            const sortedAll = [...transactions].sort((a, b) => {
+                const dateA = new Date(a.fecha.includes('T') ? a.fecha : a.fecha + 'T00:00');
+                const dateB = new Date(b.fecha.includes('T') ? b.fecha : b.fecha + 'T00:00');
+                return dateB - dateA;
+            });
+            const lastTransactions = sortedAll.slice(0, 5);
 
             const hasGastos = Object.keys(gastosPorCategoria).length > 0;
 
@@ -1058,7 +1163,9 @@
             const state = store.getState();
             const selectedType = state.selectedType || 'Gasto';
             const categories = selectedType === 'Gasto' ? state.categoriesGasto : state.categoriesIngreso;
-            const today = new Date().toISOString().split('T')[0];
+            const now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            const today = now.toISOString().slice(0, 16);
 
             return `
                 <h1 class="page-title">Agregar Movimiento</h1>
@@ -1095,8 +1202,8 @@
                         </div>
 
                         <div class="form-group">
-                            <label class="form-label" for="fecha">Fecha *</label>
-                            <input type="date" id="fecha" class="form-input" value="${today}" required>
+                            <label class="form-label" for="fecha">Fecha y Hora *</label>
+                            <input type="datetime-local" id="fecha" class="form-input" value="${today}" required>
                         </div>
 
                         <div class="form-group">
@@ -1165,8 +1272,8 @@
                         </div>
 
                         <div class="form-group">
-                            <label class="form-label" for="fecha">Fecha *</label>
-                            <input type="date" id="fecha" class="form-input" value="${transaction.fecha}" required>
+                            <label class="form-label" for="fecha">Fecha y Hora *</label>
+                            <input type="datetime-local" id="fecha" class="form-input" value="${transaction.fecha.includes('T') ? transaction.fecha : transaction.fecha + 'T10:00'}" required>
                         </div>
 
                         <div class="form-group">
@@ -1187,30 +1294,45 @@
          */
         const renderHistoryView = () => {
             const transactions = store.getState().transactions;
-            const sorted = [...transactions].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+            const sorted = [...transactions].sort((a, b) => {
+                const dateA = new Date(a.fecha.includes('T') ? a.fecha : a.fecha + 'T00:00');
+                const dateB = new Date(b.fecha.includes('T') ? b.fecha : b.fecha + 'T00:00');
+                return dateB - dateA;
+            });
 
             return `
                 <h1 class="page-title">Historial de Movimientos</h1>
                 ${transactions.length > 0 ? `
-                    <div class="transaction-list">
-                        ${sorted.map(t => `
-                            <div class="transaction-item">
-                                <div class="transaction-item__info">
-                                    <div class="transaction-item__amount transaction-item__amount--${t.tipo.toLowerCase()}">
-                                        ${t.tipo === 'Gasto' ? '-' : '+'}${formatCurrency(t.monto)}
-                                    </div>
-                                    <div class="transaction-item__desc">${t.descripcion || 'Sin descripción'}</div>
-                                    <div class="transaction-item__actions">
-                                        <button class="btn--edit" onclick="editTransaction('${t.id}')">Editar</button>
-                                        <button class="btn--delete" onclick="confirmDeleteTransaction('${t.id}')">Eliminar</button>
-                                    </div>
-                                </div>
-                                <div style="text-align: right;">
-                                    <div class="transaction-item__category">${t.categoria?.icono || ''} ${t.categoria?.nombre || ''}</div>
-                                    <div class="transaction-item__date">${formatDate(t.fecha)}</div>
-                                </div>
-                            </div>
-                        `).join('')}
+                    <div class="card">
+                        <table class="transactions-table">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Descripción</th>
+                                    <th>Categoría</th>
+                                    <th>Tipo</th>
+                                    <th>Monto</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${sorted.map(t => `
+                                    <tr>
+                                        <td>${formatDate(t.fecha)}</td>
+                                        <td>${t.descripcion || '-'}</td>
+                                        <td><span class="category-badge">${t.categoria?.icono || ''} ${t.categoria?.nombre || '-'}</span></td>
+                                        <td><span class="transaction-item__type transaction-item__type--${t.tipo.toLowerCase()}">${t.tipo}</span></td>
+                                        <td class="transaction-item__amount transaction-item__amount--${t.tipo.toLowerCase()}">${t.tipo === 'Gasto' ? '-' : '+'}${formatCurrency(t.monto)}</td>
+                                        <td>
+                                            <div class="transaction-item__actions">
+                                                <button class="btn--edit" onclick="editTransaction('${t.id}')">Editar</button>
+                                                <button class="btn--delete" onclick="confirmDeleteTransaction('${t.id}')">Eliminar</button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
                     </div>
                 ` : `
                     <div class="card">
