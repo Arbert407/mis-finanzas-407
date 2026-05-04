@@ -2098,15 +2098,16 @@
             const confirmBtn = document.getElementById('modal-confirm');
 
             titleEl.textContent = 'Ajustes';
-            contentEl.innerHTML = '<div id="settings-content"><button class="btn btn--secondary" style="width: 100%;" onclick="exportData()">Exportar datos</button></div>';
+            contentEl.innerHTML = `<div id="settings-content" style="display: flex; flex-direction: column; gap: 8px;">
+                <button class="btn btn--primary" style="width: 100%;" onclick="importData()">Importar datos</button>
+                <button class="btn btn--secondary" style="width: 100%;" onclick="exportData()">Exportar datos</button>
+            </div>`;
             cancelBtn.textContent = 'Cerrar';
             cancelBtn.onclick = closeModal;
             confirmBtn.style.display = 'none';
 
             const overlay = document.getElementById('modal-overlay');
             overlay.classList.add('modal-overlay--active');
-
-            document.querySelector('#settings-content button').onclick = exportData;
         };
 
         window.exportData = () => {
@@ -2124,6 +2125,44 @@
             a.download = `mis-finanzas-${new Date().toISOString().slice(0, 10)}.json`;
             a.click();
             URL.revokeObjectURL(url);
+        };
+
+        window.importData = () => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const data = JSON.parse(event.target.result);
+                        const state = store.getState();
+                        if (data.transactions) {
+                            const mergedTransactions = [...state.transactions, ...data.transactions];
+                            const uniqueTransactions = mergedTransactions.filter((t, i, arr) => 
+                                arr.findIndex(x => x.id === t.id) === i
+                            );
+                            store.setState({
+                                ...state,
+                                transactions: uniqueTransactions,
+                                categoriesGasto: data.categoriesGasto || state.categoriesGasto,
+                                categoriesIngreso: data.categoriesIngreso || state.categoriesIngreso
+                            });
+                            render();
+                            closeModal();
+                            alert('Datos importados correctamente');
+                        } else {
+                            alert('Archivo no válido');
+                        }
+                    } catch (err) {
+                        alert('Error al leer el archivo');
+                    }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
         };
 
         let gastosChart = null;
