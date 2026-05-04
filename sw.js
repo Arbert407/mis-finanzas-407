@@ -1,4 +1,5 @@
-const CACHE_NAME = 'mis-finanzas-v2';
+const CACHE_NAME = 'mis-finanzas-v3';
+const VERSION = 'v=3';
 
 self.addEventListener('install', (event) => {
     event.waitUntil(
@@ -8,9 +9,18 @@ self.addEventListener('install', (event) => {
                 .then((html) => {
                     const parser = new DOMParser();
                     const doc = parser.parseFromString(html, 'text/html');
-                    const assets = ['./', './index.html', './manifest.json', './16.png', './512.png'];
+                    const base = self.location.href.split('?')[0];
+                    const assets = [
+                        `${base}?${VERSION}`,
+                        `${base.replace('index.html', '')}?${VERSION}`,
+                        './index.html?nocache',
+                        './manifest.json?nocache',
+                        './16.png',
+                        './512.png'
+                    ];
                     doc.querySelectorAll('script[src], link[rel="stylesheet"]').forEach((el) => {
-                        assets.push(el.src || el.href);
+                        const url = el.src || el.href;
+                        assets.push(url.includes('?') ? url : `${url}?${VERSION}`);
                     });
                     return cache.addAll([...new Set(assets)]);
                 });
@@ -20,14 +30,21 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+    const url = new URL(event.request.url);
+    if (url.origin !== location.origin) return;
+
+    url.searchParams.set('nocache', Date.now().toString());
+    const noCacheRequest = new Request(url.toString());
+
     event.respondWith(
         caches.match(event.request).then((cached) => {
-            const fetched = fetch(event.request).then((response) => {
-                const clone = response.clone();
-                caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-                return response;
-            }).catch(() => cached);
-            return cached || fetched;
+            return fetch(noCacheRequest)
+                .then((response) => {
+                    const clone = response.clone();
+                    caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+                    return response;
+                })
+                .catch(() => cached || new Response('Offline', { status: 503 }));
         })
     );
 });
