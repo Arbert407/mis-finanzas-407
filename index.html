@@ -2031,7 +2031,17 @@
                         responsive: true,
                         maintainAspectRatio: true,
                         plugins: {
-                            legend: { display: false },
+                            legend: {
+                                display: true,
+                                position: 'bottom',
+                                labels: {
+                                    color: '#9CA3AF',
+                                    padding: 16,
+                                    usePointStyle: true,
+                                    pointStyle: 'circle',
+                                    font: { size: 12 }
+                                }
+                            },
                             tooltip: {
                                 backgroundColor: 'rgba(15, 23, 42, 0.95)',
                                 titleColor: '#E5E7EB',
