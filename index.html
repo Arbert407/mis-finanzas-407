@@ -1027,12 +1027,21 @@
 
         /* Footer */
         .footer {
-            background: var(--surface);
-            border-top: 1px solid var(--border);
-            padding: 16px 0;
-            text-align: center;
+            background: transparent;
+            border-top: none;
+            padding: 12px 0;
+            text-align: right;
             color: var(--text-muted);
-            font-size: 12px;
+            font-size: 11px;
+            position: fixed;
+            bottom: 0;
+            right: 0;
+            z-index: 100;
+            opacity: 0.6;
+        }
+
+        .main {
+            padding-bottom: 60px;
         }
 
         /* View transitions */
@@ -1097,7 +1106,7 @@
 
         <footer class="footer">
             <div class="container">
-                © 2026 Alejandro Claros - Finanzas Personales
+                © 2026 albert.407 Finanzas Personales
             </div>
         </footer>
     </div>
@@ -1974,7 +1983,17 @@
             const canvas = document.getElementById('gastos-chart');
             const canvasComparacion = document.getElementById('comparacion-chart');
 
+            const now = new Date();
+            const currentYear = now.getFullYear();
+            const currentMonth = now.getMonth();
+
+            const isCurrentMonth = (dateStr) => {
+                const date = new Date(dateStr);
+                return date.getFullYear() === currentYear && date.getMonth() === currentMonth;
+            };
+
             const transactions = store.getState().transactions;
+            const transactionsThisMonth = transactions.filter(t => isCurrentMonth(t.fecha));
 
             if (canvas) {
                 if (gastosChart) {
@@ -1982,7 +2001,7 @@
                 }
 
                 const gastosPorCategoria = {};
-                transactions
+                transactionsThisMonth
                     .filter(t => t.tipo === 'Gasto')
                     .forEach(t => {
                         const cat = t.categoria?.nombre || 'Otros';
@@ -2041,11 +2060,11 @@
                     comparacionChart.destroy();
                 }
 
-                const totalIngresos = transactions
+                const totalIngresos = transactionsThisMonth
                     .filter(t => t.tipo === 'Ingreso')
                     .reduce((sum, t) => sum + t.monto, 0);
 
-                const totalGastos = transactions
+                const totalGastos = transactionsThisMonth
                     .filter(t => t.tipo === 'Gasto')
                     .reduce((sum, t) => sum + t.monto, 0);
 
