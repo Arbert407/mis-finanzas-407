@@ -992,6 +992,19 @@
             background: rgba(255,255,255,0.15);
         }
 
+        .modal__btn--import {
+            background: var(--info);
+            color: white;
+        }
+
+        .modal__btn--import:hover {
+            background: #3B82F6;
+        }
+
+        .modal__btn--import {
+            display: none;
+        }
+
         .modal__btn--confirm {
             background: var(--danger);
             color: white;
@@ -1184,6 +1197,7 @@
                 <h3 class="modal__title" id="modal-title">Confirmar</h3>
                 <p class="modal__content" id="modal-content">¿Estás seguro?</p>
                 <div class="modal__actions">
+                    <button class="modal__btn modal__btn--import" id="modal-import">Importar</button>
                     <button class="modal__btn modal__btn--cancel" id="modal-cancel">Cancelar</button>
                     <button class="modal__btn modal__btn--confirm" id="modal-confirm">Confirmar</button>
                 </div>
