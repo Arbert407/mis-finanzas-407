@@ -60,3 +60,10 @@ self.addEventListener('activate', (event) => {
     );
     self.clients.claim();
 });
+
+self.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'FORCE_UPDATE') {
+        caches.keys().then((keys) => Promise.all(keys.map((key) => caches.delete(key))));
+        self.registration.unregister().then(() => self.clients.claim());
+    }
+});

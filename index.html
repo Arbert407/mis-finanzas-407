@@ -2425,30 +2425,26 @@
         };
 
         if ('serviceWorker' in navigator) {
-            const checkSWUpdate = async () => {
-                const registration = await navigator.serviceWorker.getRegistration();
-                if (registration) {
-                    await registration.update();
+            const forceUpdate = async () => {
+                const regs = await navigator.serviceWorker.getRegistrations();
+                for (const reg of regs) {
+                    await reg.unregister();
                 }
-                navigator.serviceWorker.register('sw.js').then((reg) => {
-                    reg.addEventListener('updatefound', () => {
-                        const newSW = reg.installing;
-                        newSW.addEventListener('statechange', () => {
-                            if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
-                                window.location.reload();
-                            }
-                        });
+                const keys = await caches.keys();
+                await Promise.all(keys.map((key) => caches.delete(key)));
+                window.location.reload();
+            };
+            const checkUpdate = async () => {
+                const reg = await navigator.serviceWorker.register('sw-v5.js?v=' + Date.now());
+                reg.addEventListener('updatefound', () => {
+                    const newSW = reg.installing;
+                    newSW.addEventListener('statechange', () => {
+                        if (newSW.state === 'installed') forceUpdate();
                     });
                 });
             };
-            if (navigator.serviceWorker.controller) {
-                navigator.serviceWorker.controller.addEventListener('statechange', (e) => {
-                    if (e.target.state === 'activated') {
-                        window.location.reload();
-                    }
-                });
-            }
-            checkSWUpdate();
+            setInterval(checkUpdate, 30000);
+            checkUpdate();
         }
 
         init();
