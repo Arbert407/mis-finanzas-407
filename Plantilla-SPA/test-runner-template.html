@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<!--
+  ╔═══════════════════════════════════════════════════════════════════════════════╗
+  ║                        PLANTILLA DE TEST RUNNER PARA SPA                       ║
+  ╚═══════════════════════════════════════════════════════════════════════════════╝
+
+  Propósito: Ejecutar pruebas automatizadas en una SPA embebida en un iframe.
+  Cómo funciona:
+    1. Esta página carga la SPA destino en un iframe (src="index.html")
+    2. Usa querySelector para manipular directamente el DOM del iframe
+    3. Ejecuta pruebas de forma secuencial y asíncrona
+    4. Registra cada paso en el panel de logs
+
+  Uso:
+    - Copia este archivo y renómbralo (ej: test-runner.html)
+    - Modifica las constantes de CONFIGURACIÓN abajo
+    - Define tus pruebas en la sección TESTS
+    - Serve la carpeta con un servidor HTTP (necesario para cross-origin)
+
+  Requisitos:
+    - Servidor HTTP (Five Server, live-server, python -m http.server, etc.)
+    - La SPA debe tenerrutas hash (#/ruta) para navegación
+-->
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- ════════════════════════════════════════════════════════════════════════════
+    TÍTULO: Cambia esto por el nombre de tu SPA
+  ════════════════════════════════════════════════════════════════════════════════ -->
+  <title>Test Runner - Mi SPA</title>
+  <style>
+    /* ════════════════════════════════════════════════════════════════════════════
+      ESTILOS: El theme es configurable. Aquí está el tema terminal/verde por defecto.
+      Cambia los colores según tu preferencia.
+    ════════════════════════════════════════════════════════════════════════════════ */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Courier New', Courier, monospace;
+      padding: 20px;
+      background: #111827;       /* Fondo oscuro principal */
+      color: #6ee7b7;            /* Color de texto verde terminal */
+      overflow-y: hidden;
+    }
+
+    .test-runner {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    /* Layout: 70% iframe, 30% logs */
+    .main-content {
+      display: grid;
+      grid-template-columns: 70% 30%;
+      gap: 20px;
+      align-items: start;
+    }
+
+    .iframe-container {
+      position: sticky;
+      top: 0;
+      height: 100%;
+    }
+
+    h1 {
+      color: #34d399;
+      margin: 20px 0;
+      font-size: 24px;
+      letter-spacing: 2px;
+      text-align: center;
+    }
+
+    .app-frame {
+      width: 100%;
+      height: 100%;
+      border: 1px solid #059669;
+      border-radius: 4px;
+      transform: scale(0.75);
+      transform-origin: top left;
+      width: 133.33%;
+      height: 133.33%;
+    }
+
+    .log-container {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      height: 90vh;
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    .results {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+    }
+
+    /* ════════════════════════════════════════════════════════════════════════════
+      BOTONES: Estilos para ejecutar y limpiar tests
+    ════════════════════════════════════════════════════════════════════════════════ */
+    .btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      font-family: 'Courier New', Courier, monospace;
+      transition: all 0.2s;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(34, 197, 94, 0.4);
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+      box-shadow: 0 4px 16px rgba(34, 197, 94, 0.6);
+    }
+
+    .btn-secondary {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+    }
+
+    .btn-secondary:hover {
+      background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+      box-shadow: 0 4px 16px rgba(239, 68, 68, 0.6);
+    }
+
+    .results {
+      background: #0f172a;
+      border: 1px solid #059669;
+      border-radius: 4px;
+      padding: 20px;
+      overflow-y: auto;
+    }
+
+    .results::-webkit-scrollbar { width: 8px; }
+    .results::-webkit-scrollbar-track { background: #111827; }
+    .results::-webkit-scrollbar-thumb { background: #059669; border-radius: 4px; }
+
+    .results-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid #059669;
+    }
+
+    .results-header h2 {
+      color: #34d399;
+      font-size: 18px;
+    }
+
+    .summary {
+      display: flex;
+      gap: 20px;
+      font-weight: 500;
+    }
+
+    .passed { color: #34d399; }
+    .failed { color: #f87171; }
+    .total { color: #34d399; }
+
+    #results {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .test-result {
+      padding: 10px;
+      border-radius: 4px;
+      font-size: 14px;
+      border-left: 3px solid;
+    }
+
+    .test-pass {
+      background: rgba(5, 150, 105, 0.2);
+      border-left-color: #059669;
+    }
+
+    .test-fail {
+      background: rgba(220, 38, 38, 0.2);
+      border-left-color: #dc2626;
+    }
+
+    .empty-results {
+      color: #6ee7b7;
+      opacity: 0.5;
+      text-align: center;
+      padding: 40px;
+    }
+
+    .log-step {
+      padding: 6px 10px;
+      font-size: 13px;
+    }
+
+    .log-step--info {
+      border-left: 2px solid #059669;
+      background: rgba(5, 150, 105, 0.1);
+      color: #6ee7b7;
+    }
+
+    .log-step--success {
+      border-left: 2px solid #22c55e;
+      background: rgba(34, 197, 94, 0.15);
+      color: #4ade80;
+    }
+
+    .log-step--error {
+      border-left: 2px solid #ef4444;
+      background: rgba(239, 68, 68, 0.1);
+      color: #fca5a5;
+    }
+
+    #iframe-status {
+      display: none;
+      padding: 10px;
+      background: rgba(255, 204, 0, 0.1);
+      border: 1px solid #8b8030;
+      color: #c8c088;
+      margin-bottom: 10px;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-runner">
+    <!-- ════════════════════════════════════════════════════════════════════════════
+      TÍTULO: Cambiar según necesidad
+    ════════════════════════════════════════════════════════════════════════════════ -->
+    <h1>Test Runner</h1>
+
+    <div class="main-content">
+      <!-- Iframe que carga la SPA a probar -->
+      <div class="iframe-container">
+        <!-- Cambiar src por el archivo de tu SPA -->
+        <iframe id="app-frame" class="app-frame" src="index.html" onload="iframeLoaded()"></iframe>
+        <div id="iframe-status">
+          ⚠️ <strong>Servidor no detectado:</strong> Asegúrate de que la SPA exista y el servidor HTTP esté corriendo
+        </div>
+      </div>
+
+      <!-- Panel de logs y controles -->
+      <div class="log-container">
+        <div class="controls">
+          <button class="btn btn-primary" onclick="runAllTests()">▶ Ejecutar Todos</button>
+          <button class="btn btn-secondary" onclick="clearResults()">Limpiar</button>
+        </div>
+
+        <div class="results">
+          <div class="results-header">
+            <h2>Log de Ejecución</h2>
+            <div class="summary">
+              <span>Pasados: <span id="passed" class="passed">0</span></span>
+              <span>Fallidos: <span id="failed" class="failed">0</span></span>
+            </div>
+          </div>
+
+          <div id="results">
+            <div class="empty-results">Presiona "Ejecutar Todos" para correr los tests</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ╔════════════════════════════════════════════════════════════════════════════╗
+       ║                           CONFIGURACIÓN                                      ║
+       ╚════════════════════════════════════════════════════════════════════════════╝ */
+
+    // Constantes globales del test runner
+    const CONFIG = {
+      // URL de la SPA a cargar en el iframe (puede ser 'index.html' u otra)
+      SPA_URL: 'index.html',
+
+      //Selector del iframe en el DOM
+      IFRAME_SELECTOR: '#app-frame',
+
+      // Delay base entre pasos (ms) - ajusta según la velocidad de tu SPA
+      BASE_DELAY: 500,
+
+      // Delay adicional después de submits o navegación (ms)
+      SUBMIT_DELAY: 2000
+    };
+
+    /* ════════════════════════════════════════════════════════════════════════════
+      ELEMENTOS DEL DOM: Referencias a contenedores de resultados
+    ════════════════════════════════════════════════════════════════════════════════ */
+    const resultsEl = document.getElementById('results');
+    const passedEl = document.getElementById('passed');
+    const failedEl = document.getElementById('failed');
+
+    // Contadores globales de resultados
+    let passedCount = 0;
+    let failedCount = 0;
+
+    /* ╔════════════════════════════════════════════════════════════════════════════╗
+       ║                        FUNCIONES AUXILIARES                                 ║
+       ╚════════════════════════════════════════════════════════════════════════════╝ */
+
+    /**
+     * Actualiza los contadores de testsPassed/Failed en el UI
+     */
+    function updateSummary() {
+      const pEl = document.getElementById('passed');
+      const fEl = document.getElementById('failed');
+      if (pEl) pEl.textContent = passedCount;
+      if (fEl) fEl.textContent = failedCount;
+    }
+
+    /**
+     * Muestra un mensaje en el panel de logs
+     * @param {string} message - Texto a mostrar
+     * @param {string} type - Tipo de mensaje: 'info', 'success', 'error'
+     */
+    function logStep(message, type = 'info') {
+      const timestamp = new Date().toLocaleTimeString();
+      const cssClass = `log-step log-step--${type}`;
+      resultsEl.innerHTML += `<div class="${cssClass}">[${timestamp}] ${message}</div>`;
+      resultsEl.scrollTop = resultsEl.scrollHeight;
+    }
+
+    /**
+     * Función de delay/espera
+     * @param {number} ms - Milisegundos a esperar
+     */
+    function delay(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    /**
+     * Espera a que un elemento exista en el DOM del iframe
+     * @param {string} selector - Selector CSS del elemento
+     * @param {number} maxAttempts - Intentos máximos (default: 20)
+     * @returns {Element|null} - El elemento o null si no se encuentra
+     */
+    async function waitForElement(selector, maxAttempts = 20) {
+      const iframe = document.querySelector(CONFIG.IFRAME_SELECTOR);
+      const doc = iframe.contentDocument;
+      for (let i = 0; i < maxAttempts; i++) {
+        const el = doc.querySelector(selector);
+        if (el) return el;
+        await delay(300);
+      }
+      return null;
+    }
+
+    /**
+     * Obtiene el documento del iframe
+     * @returns {Document|null}
+     */
+    function getIframeDoc() {
+      const iframe = document.querySelector(CONFIG.IFRAME_SELECTOR);
+      try {
+        return iframe.contentDocument;
+      } catch(e) {
+        logStep(`❌ Error accediendo al iframe: ${e.message}`, 'error');
+        return null;
+      }
+    }
+
+    /**
+     * Indica si el iframe cargó correctamente
+     */
+    function iframeLoaded() {
+      const status = document.getElementById('iframe-status');
+      const iframe = document.querySelector(CONFIG.IFRAME_SELECTOR);
+      if (iframe.contentDocument.readyState === 'complete') {
+        status.style.display = 'none';
+        console.log('✅ Iframe cargado correctamente');
+      }
+    }
+
+    /**
+     * Verifica si el iframe tiene contenido (para detectar errores de carga)
+     */
+    function checkIframeStatus() {
+      const iframe = document.querySelector(CONFIG.IFRAME_SELECTOR);
+      const status = document.getElementById('iframe-status');
+      try {
+        if (!iframe.contentDocument.body || iframe.contentDocument.body.innerHTML.trim() === '') {
+          status.style.display = 'block';
+        }
+      } catch(e) {
+        status.style.display = 'block';
+      }
+    }
+
+    /**
+     * Limpia los resultados y reinicia contadores
+     */
+    function clearResults() {
+      passedCount = 0;
+      failedCount = 0;
+      resultsEl.innerHTML = '<div class="empty-results">Presiona "Ejecutar Todos" para correr los tests</div>';
+      updateSummary();
+    }
+
+    /* ╔════════════════════════════════════════════════════════════════════════════╗
+       ║                           ESTRUCTURA DE TESTS                               ║
+       ╚════════════════════════════════════════════════════════════════════════════╝
+
+      Cada test sigue esta estructura:
+
+      async function runNombreDelTest() {
+        // 1. Obtener referencia al DOM del iframe
+        const doc = getIframeDoc();
+        if (!doc) return;
+
+        // 2. Registrar inicio del test
+        logStep('🚀 Test: Nombre del Test');
+
+        // 3. Ejecutar pasos del test
+        //    - Navegar a rutas (#/ruta)
+        //    - Rellenar formularios
+        //    - Hacer click en botones
+        //    - Verificar resultados
+
+        // 4. Marcar como Passed o Failed
+        if (testPass) {
+          passedCount++;
+        } else {
+          failedCount++;
+        }
+        updateSummary();
+      }
+
+    */
+
+    /**
+     * Función principal que ejecuta todos los tests en secuencia
+     * IMPORTANTE: Los tests deben ejecutarse en orden para mantener estado consistente
+     */
+    async function runAllTests() {
+      // Reiniciar contadores
+      passedCount = 0;
+      failedCount = 0;
+      updateSummary();
+
+      const startTime = Date.now();
+
+      // Ejecutar secuencia de tests
+      await runAllTestsSequence();
+
+      // Mostrar tiempo total
+      const totalTime = ((Date.now() - startTime) / 1000).toFixed(1);
+      logStep('');
+      logStep(`⏱️ Tiempo total: ${totalTime}s`);
+      logStep('');
+    }
+
+    /**
+     * Secuencia de ejecución de todos los tests
+     * NOTA: El orden importa - algunos tests dependen de datos creados por otros
+     *
+     * Orden recomendado:
+     * 1. Tests que crean datos (Create)
+     * 2. Tests que leen datos (Read)
+     * 3. Tests que modifican datos (Update)
+     * 4. Tests que eliminan datos (Delete)
+     * 5. Tests de funcionalidad adicional (filtros, exportación, etc.)
+     */
+    async function runAllTestsSequence() {
+      logStep('');
+      logStep('▶ EJECUTANDO TODOS LOS TESTS');
+      logStep('----------------------------------------');
+      await delay(500);
+
+      // ════════════════════════════════════════════════════════════════════════════
+      // AQUÍ DEFINIR LOS TESTS A EJECUTAR
+      // Copia y pega las llamadas a tus funciones de test
+      // ════════════════════════════════════════════════════════════════════════════
+
+      // await runCreateTest();      // Ejemplo: Test de creación
+      // await delay(1000);
+      // await runReadTest();        // Ejemplo: Test de lectura
+      // await delay(1000);
+      // await runUpdateTest();      // Ejemplo: Test de actualización
+      // await delay(1000);
+      // await runDeleteTest();      // Ejemplo: Test de eliminación
+      // await delay(1000);
+      // await runFilterTest();      // Ejemplo: Test de filtros
+
+      // ════════════════════════════════════════════════════════════════════════════
+
+      logStep('----------------------------------------');
+      logStep('▶ TODOS LOS TESTS COMPLETADOS');
+    }
+
+    /* ╔════════════════════════════════════════════════════════════════════════════╗
+       ║                         PLANTILLA DE TEST                                    ║
+       ╚════════════════════════════════════════════════════════════════════════════╝
+
+    // ════════════════════════════════════════════════════════════════════════════
+    // COPIA ESTA PLANTILLA PARA CADA NUEVO TEST
+    // ════════════════════════════════════════════════════════════════════════════
+
+    async function runMiNuevoTest() {
+      const doc = getIframeDoc();
+      if (!doc) return;
+
+      logStep('🚀 Test: Descripción del test');
+
+      try {
+        // ----- Paso 1: Navegar a la vista/页 -----
+        // Las SPAs usan rutas hash como #/agregar, #/historial, etc.
+        logStep('1️⃣ Navegando a...');
+        const navLink = doc.querySelector('a[href="#/ruta-destino"]');
+        if (navLink) navLink.click();
+        await delay(CONFIG.BASE_DELAY);
+
+        // ----- Paso 2: Encontrar elementos del formulario -----
+        const input = doc.querySelector('#mi-input');
+        if (!input) {
+          logStep('❌ Input no encontrado', 'error');
+          failedCount++;
+          updateSummary();
+          return;
+        }
+
+        // ----- Paso 3: Interactuar con el elemento -----
+        logStep('2️⃣ Rellenando campo...');
+        input.value = 'mi valor';
+
+        // ----- Paso 4: Enviar formulario (si aplica) -----
+        const form = doc.querySelector('#mi-form');
+        if (form) {
+          form.dispatchEvent(new Event('submit', { bubbles: true }));
+          await delay(CONFIG.SUBMIT_DELAY);
+        }
+
+        // ----- Paso 5: Verificar resultado (si aplica) -----
+        // Ejemplo: verificar que apareció un mensaje de éxito
+        // const successMsg = doc.querySelector('.mensaje-exito');
+        // if (successMsg) {
+        //   logStep('✅ Operación exitosa');
+        // } else {
+        //   logStep('❌ No se encontró mensaje de éxito', 'error');
+        //   failedCount++;
+        //   updateSummary();
+        //   return;
+        // }
+
+        // ----- Paso 6: Regresar a Home (recomendado) -----
+        logStep('6️⃣ Regresando a Inicio...');
+        const homeLink = doc.querySelector('a[href="#/"]');
+        if (homeLink) homeLink.click();
+
+        logStep('✅ Test completado', 'success');
+        passedCount++;
+
+      } catch (e) {
+        logStep(`❌ Error: ${e.message}`, 'error');
+        failedCount++;
+      }
+
+      updateSummary();
+    }
+
+    */
+
+    /* ╔════════════════════════════════════════════════════════════════════════════╗
+       ║                      EJEMPLO: TEST DE CREACIÓN                              ║
+       ╚════════════════════════════════════════════════════════════════════════════╝ */
+
+    async function runCreateTest() {
+      const doc = getIframeDoc();
+      if (!doc) return;
+
+      logStep('🚀 Test: Crear nuevo elemento');
+
+      try {
+        // 1. Navegar a formulario
+        logStep('1️⃣ Ir a formulario de creación');
+        const addLink = doc.querySelector('a[href="#/agregar"]');
+        if (addLink) addLink.click();
+        await delay(CONFIG.BASE_DELAY);
+
+        // 2. Rellenar campos
+        const form = doc.querySelector('#transaction-form');
+        if (!form) {
+          logStep('❌ Formulario no encontrado', 'error');
+          failedCount++;
+          updateSummary();
+          return;
+        }
+
+        logStep('2️⃣ Rellenando campos...');
+        const montoInput = doc.querySelector('#monto');
+        if (montoInput) montoInput.value = '100';
+
+        const categoriaInput = doc.querySelector('#categoria');
+        if (categoriaInput) categoriaInput.value = 'categoria1';
+
+        const descInput = doc.querySelector('#descripcion');
+        if (descInput) descInput.value = 'Test de creación';
+
+        // 3. Enviar
+        logStep('3️⃣ Enviando formulario...');
+        form.dispatchEvent(new Event('submit', { bubbles: true }));
+        await delay(CONFIG.SUBMIT_DELAY);
+
+        // 4. Regresar a home
+        logStep('4️⃣ Regresar a Inicio');
+        const homeLink = doc.querySelector('a[href="#/"]');
+        if (homeLink) homeLink.click();
+
+        logStep('✅ Test completado', 'success');
+        passedCount++;
+
+      } catch (e) {
+        logStep(`❌ Error: ${e.message}`, 'error');
+        failedCount++;
+      }
+
+      updateSummary();
+    }
+
+    /* ╔════════════════════════════════════════════════════════════════════════════╗
+       ║                      EJEMPLO: TEST DE EDICIÓN                               ║
+       ╚════════════════════════════════════════════════════════════════════════════╝ */
+
+    async function runEditTest() {
+      const doc = getIframeDoc();
+      if (!doc) return;
+
+      logStep('🚀 Test: Editar elemento');
+
+      try {
+        // 1. Ir a lista/historial
+        logStep('1️⃣ Ir a historial');
+        const historyLink = doc.querySelector('a[href="#/historial"]');
+        if (historyLink) historyLink.click();
+        await delay(CONFIG.BASE_DELAY);
+
+        // 2. Buscar botón de edición
+        logStep('2️⃣ Buscar botón Editar');
+        const editBtn = doc.querySelector('.btn--edit');
+        if (!editBtn) {
+          logStep('❌ No hay elementos para editar', 'error');
+          logStep('   Ejecuta primero el test de creación');
+          failedCount++;
+          updateSummary();
+          return;
+        }
+        editBtn.click();
+        await delay(CONFIG.BASE_DELAY);
+
+        // 3. Modificar campos
+        logStep('3️⃣ Modificar valores...');
+        const montoInput = doc.querySelector('#monto');
+        if (montoInput) montoInput.value = '200';
+
+        const descInput = doc.querySelector('#descripcion');
+        if (descInput) descInput.value = 'Elemento editado';
+
+        // 4. Guardar cambios
+        logStep('4️⃣ Guardar cambios');
+        const form = doc.querySelector('#transaction-form');
+        if (form) form.dispatchEvent(new Event('submit', { bubbles: true }));
+        await delay(CONFIG.SUBMIT_DELAY);
+
+        // 5. Regresar a home
+        const homeLink = doc.querySelector('a[href="#/"]');
+        if (homeLink) homeLink.click();
+
+        logStep('✅ Test completado', 'success');
+        passedCount++;
+
+      } catch (e) {
+        logStep(`❌ Error: ${e.message}`, 'error');
+        failedCount++;
+      }
+
+      updateSummary();
+    }
+
+    /* ╔════════════════════════════════════════════════════════════════════════════╗
+       ║                      EJEMPLO: TEST DE ELIMINACIÓN                          ║
+       ╚════════════════════════════════════════════════════════════════════════════╝ */
+
+    async function runDeleteTest() {
+      const doc = getIframeDoc();
+      if (!doc) return;
+
+      logStep('🚀 Test: Eliminar elemento');
+
+      try {
+        // 1. Ir a lista/historial
+        logStep('1️⃣ Ir a historial');
+        const historyLink = doc.querySelector('a[href="#/historial"]');
+        if (historyLink) historyLink.click();
+        await delay(CONFIG.BASE_DELAY);
+
+        // 2. Buscar botón de eliminación
+        logStep('2️⃣ Buscar botón Eliminar');
+        const deleteBtn = doc.querySelector('.btn--delete');
+        if (!deleteBtn) {
+          logStep('❌ No hay elementos para eliminar', 'error');
+          failedCount++;
+          updateSummary();
+          return;
+        }
+        deleteBtn.click();
+        await delay(300);
+
+        // 3. Confirmar eliminación (si hay modal de confirmación)
+        logStep('3️⃣ Confirmar eliminación');
+        const confirmBtn = doc.querySelector('.modal__btn--confirm');
+        if (confirmBtn) confirmBtn.click();
+        await delay(CONFIG.BASE_DELAY);
+
+        // 4. Cerrar modal si queda abierto
+        const modalOverlay = doc.querySelector('.modal-overlay--active');
+        if (modalOverlay) {
+          const cancelBtn = doc.querySelector('.modal__btn--cancel');
+          if (cancelBtn) cancelBtn.click();
+        }
+
+        // 5. Regresar a home
+        logStep('5️⃣ Regresar a Inicio');
+        const homeLink = doc.querySelector('a[href="#/"]');
+        if (homeLink) homeLink.click();
+
+        logStep('✅ Test completado', 'success');
+        passedCount++;
+
+      } catch (e) {
+        logStep(`❌ Error: ${e.message}`, 'error');
+        failedCount++;
+      }
+
+      updateSummary();
+    }
+
+    /* ╔════════════════════════════════════════════════════════════════════════════╗
+       ║                      EJEMPLO: TEST DE FILTROS                              ║
+       ╚════════════════════════════════════════════════════════════════════════════╝ */
+
+    async function runFilterTest() {
+      const doc = getIframeDoc();
+      if (!doc) return;
+
+      logStep('🚀 Test: Filtros');
+
+      try {
+        // 1. Ir a historial donde están los filtros
+        logStep('1️⃣ Ir a Historial');
+        const historyLink = doc.querySelector('a[href="#/historial"]');
+        if (historyLink) historyLink.click();
+        await delay(CONFIG.BASE_DELAY);
+
+        // 2. Probar cada filtro
+        logStep('2️⃣ Aplicar filtro tipo A');
+        const filterA = doc.querySelector('#filter-tipoA');
+        if (filterA) filterA.click();
+        await delay(CONFIG.BASE_DELAY);
+
+        logStep('3️⃣ Aplicar filtro tipo B');
+        const filterB = doc.querySelector('#filter-tipoB');
+        if (filterB) filterB.click();
+        await delay(CONFIG.BASE_DELAY);
+
+        logStep('4️⃣ Quitar filtros (Todos)');
+        const filterAll = doc.querySelector('#filter-all');
+        if (filterAll) filterAll.click();
+
+        logStep('✅ Test completado', 'success');
+        passedCount++;
+
+      } catch (e) {
+        logStep(`❌ Error: ${e.message}`, 'error');
+        failedCount++;
+      }
+
+      updateSummary();
+    }
+
+    /* ╔════════════════════════════════════════════════════════════════════════════╗
+       ║                      EJEMPLO: TEST DE EXPORTACIÓN                           ║
+       ╚════════════════════════════════════════════════════════════════════════════╝ */
+
+    async function runExportTest() {
+      const doc = getIframeDoc();
+      if (!doc) return;
+
+      logStep('🚀 Test: Exportar Datos');
+
+      try {
+        // 1. Abrir menú de settings
+        logStep('1️⃣ Abrir settings');
+        const settingsBtn = doc.querySelector('.settings-btn');
+        if (settingsBtn) settingsBtn.click();
+        await delay(CONFIG.BASE_DELAY);
+
+        // 2. Buscar botón de exportar en el modal
+        logStep('2️⃣ Buscar botón Exportar en modal');
+        const modal = doc.querySelector('.modal-overlay--active');
+        if (!modal) {
+          logStep('❌ Modal de settings no se abrió', 'error');
+          failedCount++;
+          updateSummary();
+          return;
+        }
+
+        const exportBtn = modal.querySelector('button[onclick="exportData()"]');
+        if (exportBtn) {
+          exportBtn.click();
+          await delay(CONFIG.BASE_DELAY);
+          logStep('✅ Datos exportados (revisa descargas del navegador)');
+        } else {
+          logStep('⚠️ Botón exportar no encontrado');
+        }
+
+        // 3. Cerrar modal
+        logStep('3️⃣ Cerrar modal');
+        const closeBtn = doc.querySelector('#modal-cancel');
+        if (closeBtn) closeBtn.click();
+
+        logStep('✅ Test completado', 'success');
+        passedCount++;
+
+      } catch (e) {
+        logStep(`❌ Error: ${e.message}`, 'error');
+        failedCount++;
+      }
+
+      updateSummary();
+    }
+
+    // ════════════════════════════════════════════════════════════════════════════
+    // EXPORTAR FUNCIONES AL WINDOW PARA PODER LLAMARLAS DESDE LA CONSOLA
+    // ════════════════════════════════════════════════════════════════════════════
+
+    window.runAllTests = runAllTests;
+    window.clearResults = clearResults;
+
+    // Descomenta las funciones de test que uses:
+    // window.runCreateTest = runCreateTest;
+    // window.runEditTest = runEditTest;
+    // window.runDeleteTest = runDeleteTest;
+    // window.runFilterTest = runFilterTest;
+    // window.runExportTest = runExportTest;
+
+    // ════════════════════════════════════════════════════════════════════════════
+    // INICIALIZACIÓN: Verificar estado del iframe al cargar
+    // ════════════════════════════════════════════════════════════════════════════
+    window.onload = function() {
+      setTimeout(checkIframeStatus, 2000);
+    };
+  </script>
+</body>
+</html>
+
+<!--
+  ╔═══════════════════════════════════════════════════════════════════════════════╗
+  ║                              GUÍA RÁPIDA                                         ║
+  ╚═══════════════════════════════════════════════════════════════════════════════╝
+
+  1. Copia esta plantilla como test-runner.html
+  2. Sirve con un servidor HTTP:
+       - Five Server (VS Code): Click derecho > "Open with Live Server"
+       - Python: python -m http.server 8000
+       - Node: npx serve
+  3. Modifica CONFIG.SPA_URL si tu archivo es diferente a index.html
+  4. Define tus tests en runAllTestsSequence()
+  5. Cada test debe:
+     - Usar getIframeDoc() para obtener el DOM
+     - Usar logStep() para registrar pasos
+     - Incrementar passedCount o failedCount
+     - Llamar updateSummary()
+     - Regresar a home al final (recomendado)
+  6. Los IDs y selectores dependen de tu SPA - inspecciónalos con DevTools
+
+  Troubleshooting:
+  - Si los tests fallan, revisa los selectores (usa DevTools > Inspector)
+  - Aumenta los delays si la SPA es lenta
+  - Verifica que la SPA use rutas hash (#/ruta)
+  - Asegúrate de que el servidor HTTP esté corriendo
+-->

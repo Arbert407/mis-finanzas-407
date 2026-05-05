@@ -1,222 +1,470 @@
 # VERIFICATION.md
 
-## Verificación de SPA (file://)
+## Verificación de SPA - Guía Genérica
 
-### 1. Test Runner Automatizado
+Esta guía proporciona instrucciones para crear tests automatizados usando la plantilla `test-runner-template.html`.
 
-**Archivo:** `test-runner.html`
+---
 
-Si el archivo `test-runner.html` no existe, debe crearse. Este archivo sirve para ejecutar tests automatizados antes de cualquier verificación manual.
+## 1. Preparación del Entorno
 
-**Estructura requerida del test-runner:**
+### 1.1 Requisitos
 
-1. Debe incluir un `<iframe>` visible que cargue `index.html` para mostrar la aplicación durante los tests
-2. Debe tener botones para ejecutar todos los tests y limpiar resultados
-3. Debe mostrar un resumen con cantidad de tests pasados, fallidos y totales
+- **Servidor HTTP**: Las pruebas requieren un servidor HTTP (no funciona con `file://`).
+  - Five Server (VS Code): Click derecho > "Open with Live Server"
+  - Python: `python -m http.server 8000`
+  - Node: `npx serve`
+- **Navegador moderno** con soporte para iframes
+
+### 1.2 Instalación
+
+1. Copiar `test-runner-template.html` y renombrarlo (ej: `test-runner.html`)
+2. Modificar `CONFIG.SPA_URL` si el archivo de la SPA es diferente a `index.html`
+3. Servir la carpeta con un servidor HTTP
+4. Abrir `test-runner.html` en el navegador
+
+---
+
+## 2. Configuración del Test Runner
+
+### 2.1 Constantes de Configuración
+
+En el archivo `test-runner.html`, modificar según necesidad:
+
+```javascript
+const CONFIG = {
+  SPA_URL: 'index.html',           // Archivo de la SPA
+  IFRAME_SELECTOR: '#app-frame',  // Selector del iframe
+  BASE_DELAY: 500,                 // Delay base entre pasos (ms)
+  SUBMIT_DELAY: 2000              // Delay después de submits (ms)
+};
+```
+
+### 2.2 Estructura Requerida
+
+El test-runner debe incluir:
+
+1. **Iframe visible** que cargue la SPA destino
+2. **Botón "Ejecutar Todos"** para correr todos los tests
+3. **Botón "Limpiar"** para resetear resultados
+4. **Panel de logs** con contadores de Passed/Failed
 
 ```html
-<!-- Iframe visible para testing interactivo -->
-<iframe id="app-frame" src="index.html" style="width:100%; height:500px; border:1px solid #ccc;"></iframe>
-
-<!-- Controles -->
+<iframe id="app-frame" src="index.html"></iframe>
 <button onclick="runAllTests()">▶ Ejecutar Todos</button>
 <button onclick="clearResults()">Limpiar</button>
-
-<!-- Resultados -->
-<div id="results"></div>
-<div>Pasados: <span id="passed">0</span></div>
-<div>Fallidos: <span id="failed">0</span></div>
+<div id="passed">0</div>
+<div id="failed">0</div>
 ```
 
-**Para ejecutar:**
-1. Abrir `test-runner.html` en navegador
-2. Click en "▶ Ejecutar Todos"
+---
 
-Los tests utilizan el `<iframe>` para acceder al código de `index.html` (state, localStorage, DOM).
+## 3. Estructura de un Test
 
-```html
-<script>
-// Acceder al código del iframe
-const app = document.getElementById('app-frame').contentWindow;
-const state = app.state;
-const iframeDoc = app.document;
-</script>
-```
+### 3.1 Plantilla Base
 
-#### Formato de Tests con Detalle
-
-Cada test debe incluir:
-- **ID único** (ej: T-001)
-- **Descripción clara** del test
-- **Valores de entrada** usados
-- **Resultado esperado**
-- **Valor obtenido** si falla
-- **Ubicación** del código que falló
+Cada test debe seguir esta estructura:
 
 ```javascript
-function test(id, name, fn, details) {
+async function runMiTest() {
+  // 1. Obtener referencia al DOM del iframe
+  const doc = getIframeDoc();
+  if (!doc) return;
+
+  // 2. Registrar inicio del test
+  logStep('🚀 Test: Descripción del test');
+
   try {
-    fn();
-    results.innerHTML += `<div class="test-result test-pass">[${id}] ✓ ${name}</div>`;
-    return true;
+    // 3. Ejecutar pasos del test
+    //    - Navegar a rutas (#/ruta)
+    //    - Rellenar formularios
+    //    - Hacer click en botones
+    //    - Verificar resultados
+
+    // 4. Marcar como Passed o Failed
+    logStep('✅ Test completado', 'success');
+    passedCount++;
   } catch (e) {
-    results.innerHTML += `<div class="test-result test-fail">
-      [${id}] ✗ ${name}<br>
-      <pre class="test-details">${details}</pre>
-    </div>`;
-    return false;
+    logStep(`❌ Error: ${e.message}`, 'error');
+    failedCount++;
   }
+
+  updateSummary();
 }
-
-// Ejemplo de uso
-test('T-001', 'DataService.create() crea transacción', () => {
-  const input = { tipo: 'Ingreso', monto: 100, descripcion: 'Test' };
-  const t = DataService.create(input);
-  assert(t.id, 'debe tener id');
-}, 'Input: {"tipo":"Ingreso","monto":100}\nExpected: id existe\nGot: ' + JSON.stringify(t));
 ```
 
-### 1.1 Test Runner Interactivo (UI Testing)
+### 3.2 Pasos Típicos de un Test
 
-Para pruebas de UI que requieren interacción (clicks, navegación), el test-runner muestra el iframe:
+1. **Navegación**: Usar links con rutas hash
+   ```javascript
+   const navLink = doc.querySelector('a[href="#/ruta"]');
+   if (navLink) navLink.click();
+   await delay(CONFIG.BASE_DELAY);
+   ```
 
-```html
-<!-- Iframe visible para testing interactivo -->
-<iframe id="app-frame" src="index.html" style="width:100%; height:500px; border:1px solid #ccc;"></iframe>
+2. **Rellenar formularios**: Seleccionar inputs por ID
+   ```javascript
+   doc.querySelector('#monto').value = '100';
+   doc.querySelector('#categoria').value = 'categoria1';
+   doc.querySelector('#descripcion').value = 'Test';
+   ```
 
-<script>
-// Obtener acceso al iframe
-const iframe = document.getElementById('app-frame');
-const iframeDoc = iframe.contentDocument;
+3. **Enviar formularios**: Usar dispatchEvent
+   ```javascript
+   const form = doc.querySelector('#mi-form');
+   form.dispatchEvent(new Event('submit', { bubbles: true }));
+   await delay(CONFIG.SUBMIT_DELAY);
+   ```
 
-// Simular click en botón Editar
-const editButton = iframeDoc.querySelector('[data-edit="id-transaccion"]');
-editButton.click();
+4. **Hacer clicks**: Seleccionar botones
+   ```javascript
+   const btn = doc.querySelector('.btn--edit');
+   if (btn) btn.click();
+   ```
 
-// Verificar que navega al formulario de edición
-// La URL del iframe debe cambiar a #/editar/id-transaccion
-</script>
-```
+5. **Regresar a Home**: Al final del test (recomendado)
+   ```javascript
+   const homeLink = doc.querySelector('a[href="#/"]');
+   if (homeLink) homeLink.click();
+   ```
 
-El iframe visible permite:
-- **Click manual** en botones (Editar, Eliminar, etc.)
-- **Verificar navegación** entre rutas
-- **Probar formularios** de manera visual
-- **Debug UI** en tiempo real
+### 3.3 Funciones Auxiliares Disponibles
 
-### 1.2 Tests Automatizados de Botones
+| Función | Descripción |
+|---------|-------------|
+| `getIframeDoc()` | Obtiene el documento del iframe |
+| `logStep(msg, type)` | Registra mensaje (type: 'info', 'success', 'error') |
+| `delay(ms)` | Espera milisegundos |
+| `waitForElement(selector)` | Espera a que exista un elemento |
+| `updateSummary()` | Actualiza contadores en UI |
 
-Para automatizar clicks en botones dentro del iframe:
+---
+
+## 4. Tipos de Tests Comunes
+
+### 4.1 Test de Creación (Create)
 
 ```javascript
-function clickButton(iframe, selector) {
-  const doc = iframe.contentDocument;
-  const btn = doc.querySelector(selector);
-  if (btn) {
-    btn.click();
-    return true;
+async function runCreateTest() {
+  const doc = getIframeDoc();
+  if (!doc) return;
+
+  logStep('🚀 Test: Crear elemento');
+
+  // Navegar al formulario
+  const addLink = doc.querySelector('a[href="#/agregar"]');
+  if (addLink) addLink.click();
+  await delay(CONFIG.BASE_DELAY);
+
+  // Rellenar campos
+  const form = doc.querySelector('#transaction-form');
+  if (!form) {
+    logStep('❌ Formulario no encontrado', 'error');
+    failedCount++;
+    updateSummary();
+    return;
   }
-  return false;
-}
 
-function getIframeURL(iframe) {
-  return iframe.contentWindow.location.hash;
-}
+  doc.querySelector('#monto').value = '100';
+  doc.querySelector('#categoria').value = 'g1';
+  doc.querySelector('#descripcion').value = 'Test';
 
-// Ejemplo: Test de navegación al editar
-test('T-009', 'Click en Editar navega a /editar/:id', () => {
-  const iframe = document.getElementById('app-frame');
-  const doc = iframe.contentDocument;
-  
-  // Crear transacción primero
-  DataService.create({ tipo: 'Ingreso', monto: 100 });
-  
-  // Ir a movimientos
-  iframe.contentWindow.location.hash = '#/movimientos';
-  
-  // Click en botón editar
-  const editBtn = doc.querySelector('[data-edit]');
-  assert(editBtn !== null, 'debe haber botón editar');
-  editBtn.click();
-  
-  // Verificar navegación
-  const hash = getIframeURL(iframe);
-  assert(hash.includes('/editar/'), 'debe navegar a /editar/');
-}, 'Input: Click en botón [data-edit]\nExpected: URL cambia a #/editar/:id\nGot: ' + hash);
+  // Enviar
+  form.dispatchEvent(new Event('submit', { bubbles: true }));
+  await delay(CONFIG.SUBMIT_DELAY);
+
+  // Regresar a home
+  const homeLink = doc.querySelector('a[href="#/"]');
+  if (homeLink) homeLink.click();
+
+  logStep('✅ Test completado', 'success');
+  passedCount++;
+  updateSummary();
+}
 ```
 
-**Funciones helper para UI testing:**
-- `clickButton(iframe, selector)` - Simula click en botón
-- `getIframeURL(iframe)` - Obtiene hash actual del iframe
-- `fillForm(iframe, data)` - Rellena formulario
-- `submitForm(iframe)` - Envía formulario
+### 4.2 Test de Edición (Update)
 
-### 2. Checklist de Tests por HU
+```javascript
+async function runEditTest() {
+  const doc = getIframeDoc();
+  if (!doc) return;
 
-*Plantilla genérica para cualquier Historia de Usuario (HU). No hardcodee HUs específicas; agregue filas dinámicamente según las HUs asignadas.*
+  logStep('🚀 Test: Editar elemento');
+
+  // Ir a lista/historial
+  const historyLink = doc.querySelector('a[href="#/historial"]');
+  if (historyLink) historyLink.click();
+  await delay(CONFIG.BASE_DELAY);
+
+  // Buscar botón de edición
+  const editBtn = doc.querySelector('.btn--edit');
+  if (!editBtn) {
+    logStep('❌ No hay elementos para editar', 'error');
+    failedCount++;
+    updateSummary();
+    return;
+  }
+  editBtn.click();
+  await delay(CONFIG.BASE_DELAY);
+
+  // Modificar valores
+  const montoInput = doc.querySelector('#monto');
+  if (montoInput) montoInput.value = '200';
+
+  // Guardar
+  const form = doc.querySelector('#transaction-form');
+  if (form) form.dispatchEvent(new Event('submit', { bubbles: true }));
+  await delay(CONFIG.SUBMIT_DELAY);
+
+  // Regresar a home
+  const homeLink = doc.querySelector('a[href="#/"]');
+  if (homeLink) homeLink.click();
+
+  logStep('✅ Test completado', 'success');
+  passedCount++;
+  updateSummary();
+}
+```
+
+### 4.3 Test de Eliminación (Delete)
+
+```javascript
+async function runDeleteTest() {
+  const doc = getIframeDoc();
+  if (!doc) return;
+
+  logStep('🚀 Test: Eliminar elemento');
+
+  // Ir a historial
+  const historyLink = doc.querySelector('a[href="#/historial"]');
+  if (historyLink) historyLink.click();
+  await delay(CONFIG.BASE_DELAY);
+
+  // Buscar botón de eliminación
+  const deleteBtn = doc.querySelector('.btn--delete');
+  if (!deleteBtn) {
+    logStep('❌ No hay elementos para eliminar', 'error');
+    failedCount++;
+    updateSummary();
+    return;
+  }
+  deleteBtn.click();
+  await delay(300);
+
+  // Confirmar si hay modal
+  const confirmBtn = doc.querySelector('.modal__btn--confirm');
+  if (confirmBtn) confirmBtn.click();
+  await delay(CONFIG.BASE_DELAY);
+
+  // Regresar a home
+  const homeLink = doc.querySelector('a[href="#/"]');
+  if (homeLink) homeLink.click();
+
+  logStep('✅ Test completado', 'success');
+  passedCount++;
+  updateSummary();
+}
+```
+
+### 4.4 Test de Filtros
+
+```javascript
+async function runFilterTest() {
+  const doc = getIframeDoc();
+  if (!doc) return;
+
+  logStep('🚀 Test: Filtros');
+
+  // Ir a historial donde están los filtros
+  const historyLink = doc.querySelector('a[href="#/historial"]');
+  if (historyLink) historyLink.click();
+  await delay(CONFIG.BASE_DELAY);
+
+  // Probar cada filtro
+  const filterA = doc.querySelector('#filter-tipoA');
+  if (filterA) filterA.click();
+  await delay(CONFIG.BASE_DELAY);
+
+  const filterB = doc.querySelector('#filter-tipoB');
+  if (filterB) filterB.click();
+  await delay(CONFIG.BASE_DELAY);
+
+  // Quitar filtros
+  const filterAll = doc.querySelector('#filter-all');
+  if (filterAll) filterAll.click();
+
+  logStep('✅ Test completado', 'success');
+  passedCount++;
+  updateSummary();
+}
+```
+
+### 4.5 Test de Exportación
+
+```javascript
+async function runExportTest() {
+  const doc = getIframeDoc();
+  if (!doc) return;
+
+  logStep('🚀 Test: Exportar Datos');
+
+  // Abrir settings
+  const settingsBtn = doc.querySelector('.settings-btn');
+  if (settingsBtn) settingsBtn.click();
+  await delay(CONFIG.BASE_DELAY);
+
+  // Buscar exportar en modal
+  const modal = doc.querySelector('.modal-overlay--active');
+  if (!modal) {
+    logStep('❌ Modal no se abrió', 'error');
+    failedCount++;
+    updateSummary();
+    return;
+  }
+
+  const exportBtn = modal.querySelector('button[onclick="exportData()"]');
+  if (exportBtn) {
+    exportBtn.click();
+    await delay(CONFIG.BASE_DELAY);
+    logStep('✅ Datos exportados');
+  }
+
+  // Cerrar modal
+  const closeBtn = doc.querySelector('#modal-cancel');
+  if (closeBtn) closeBtn.click();
+
+  logStep('✅ Test completado', 'success');
+  passedCount++;
+  updateSummary();
+}
+```
+
+---
+
+## 5. Registro de Tests
+
+### 5.1 Ejecutar Tests en Secuencia
+
+En `runAllTestsSequence()`, definir el orden de ejecución:
+
+```javascript
+async function runAllTestsSequence() {
+  logStep('');
+  logStep('▶ EJECUTANDO TODOS LOS TESTS');
+  logStep('----------------------------------------');
+  await delay(500);
+
+  // El orden importa: algunos tests dependen de datos creados por otros
+  await runCreateTest();
+  await delay(1000);
+  await runEditTest();
+  await delay(1000);
+  await runDeleteTest();
+  await delay(1000);
+  await runFilterTest();
+  await delay(1000);
+  await runExportTest();
+
+  logStep('----------------------------------------');
+  logStep('▶ TODOS LOS TESTS COMPLETADOS');
+}
+```
+
+### 5.2 Orden Recomendado
+
+1. **Create**: Crea datos necesarios para otros tests
+2. **Read**: Verifica que los datos se muestren correctamente
+3. **Update**: Modifica datos existentes
+4. **Delete**: Elimina datos (debe ser último para limpieza)
+5. **Otros**: Filtros, exportación, etc.
+
+---
+
+## 6. Identificación de Selectores
+
+### 6.1 Cómo encontrar los selectores correctos
+
+Usar DevTools del navegador (F12):
+
+1. **Inspeccionar elemento**: Click derecho > Inspect
+2. **Copiar selector**: Click derecho > Copy > Copy selector
+3. **Consola de test**: En test-runner, ejecutar:
+   ```javascript
+   const doc = document.querySelector('#app-frame').contentDocument;
+   doc.querySelectorAll('button')  // Listar todos los botones
+   doc.querySelectorAll('a')        // Listar todos los links
+   ```
+
+### 6.2 Selectores Comunes
+
+| Tipo | Ejemplo |
+|------|---------|
+| Por ID | `#monto`, `#categoria` |
+| Por clase | `.btn--edit`, `.btn--delete` |
+| Por atributo | `a[href="#/historial"]` |
+| Por texto | `button:contains("Guardar")` |
+
+---
+
+## 7. Checklist de Tests por HU
+
+*Plantilla genérica para cualquier Historia de Usuario (HU).*
 
 | HU | Tests Requeridos | Estado |
-|----|------------------|--------|
-| **[ID-HU]** [Título de la HU] | [Tipos de tests: Lógica, UI, Integración] | [ ] |
+|----|-----------------|--------|
+| [ID-HU] | [CRUD + Filtros + Export] | [ ] |
 
 **Instrucciones:**
-1. Para cada HU nueva, añada una fila con su ID, título, tests requeridos y estado inicial `[ ]`.
-2. Marque `[x]` al completar todos los tests de la HU.
+1. Para cada HU nueva, añadir una fila con su ID, tests requeridos y estado `[ ]`.
+2. Marcar `[x]` al completar todos los tests de la HU.
 3. Los tests deben cubrir los criterios de aceptación de la HU.
 
-### 3. Checklist Funcional Manual
+---
 
-**Navegación SPA**
+## 8. Verificación Manual
+
+### 8.1 Navegación SPA
 - [ ] Al hacer clic, la URL cambia sin recarga de página
 - [ ] Botón "atrás" vuelve a la vista anterior
 - [ ] Botón "adelante" funciona
 
-**UI/UX**
+### 8.2 UI/UX
 - [ ] Loading spinner durante carga de datos
 - [ ] Mensajes de error visibles
 - [ ] Estados vacíos tienen diseño
 - [ ] Sin parpadeo entre vistas
 
-**Console (F12)**
+### 8.3 Console (F12)
 - [ ] Sin errores rojos
 - [ ] Sin warnings
 
-### 4. Verificación de Tests (Console DevTools)
+---
 
-```javascript
-// Ejecutar en test-runner.html
-// Tests de Lógica
-window.app.getTotalIncome()
-window.app.getTotalExpense()
-window.app.getBalance()
-window.getCategoryById('salario')
-
-// Tests de UI
-document.querySelectorAll('.summary__item').length  // 3
-document.querySelectorAll('.nav-link').length       // 3
-document.querySelector('#transaction-form')         // no null
-
-// Tests de Integración
-localStorage.getItem('finanzas_transactions')
-window.location.hash = '#/movimientos'
-```
-
-### 5. Criterios de Calidad
+## 9. Criterios de Calidad
 
 - [ ] Sin dependencias innecesarias
-- [ ] Código modular
+- [ ] Código modular y reutilizable
 - [ ] Sin memory leaks
 - [ ] CSS no bloqueante
 - [ ] Imágenes optimizadas
 
-### 6. Performance
+---
 
-En DevTools > Performance: grabar 3s de interacción, verificar "Long Tasks" <50ms.
+## 10. Troubleshooting
+
+| Problema | Solución |
+|----------|----------|
+| Iframe no carga | Verificar que el servidor HTTP esté corriendo |
+| Tests fallan | Revisar selectores con DevTools |
+| Navegación no funciona | Verificar que la SPA use rutas hash (#/ruta) |
+| Datos no persisten | Verificar localStorage después de cada test |
+| Tiempos de espera | Aumentar BASE_DELAY o SUBMIT_DELAY |
 
 ---
 
-##Historial de Ejecución de Tests
+## Historial de Ejecución de Tests
 
 | Fecha | HU | Tests Pasados | Tests Fallidos | Ejecutado Por |
 |-------|-----|---------------|----------------|---------------|
-| | | | | |
+| | | | | | |
