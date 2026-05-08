@@ -267,6 +267,29 @@
             filter: invert(0.9);
         }
 
+        input[type="text"] {
+            width: 100%;
+            height: 40px;
+            padding: 0 16px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-size: 14px;
+            font-family: inherit;
+            transition: var(--transition-fast);
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: rgba(255,255,255,0.08);
+        }
+
+        input[type="text"]::placeholder {
+            color: var(--text-muted);
+        }
+
         .date-picker-wrapper {
             position: relative;
             display: inline-block;
@@ -1147,6 +1170,40 @@
             opacity: 1;
         }
 
+        /* Toast notification */
+        .toast {
+            position: fixed;
+            top: 70px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 12px 24px;
+            border-radius: 8px;
+            background: #1E293B;
+            color: var(--text-primary);
+            font-size: 14px;
+            z-index: 2000;
+            box-shadow: var(--shadow-md);
+            animation: toastIn 0.3s ease;
+        }
+
+        .toast--success { border-left: 3px solid var(--success); }
+        .toast--error { border-left: 3px solid var(--danger); }
+        .toast--warning { border-left: 3px solid var(--warning); }
+
+        @keyframes toastIn {
+            from { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+            to { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+
+        @keyframes toastOut {
+            from { opacity: 1; transform: translateX(-50%) translateY(0); }
+            to { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+        }
+
+        .toast.hiding {
+            animation: toastOut 0.3s ease forwards;
+        }
+
         /* Floating Action Button */
         .fab, a.fab {
             position: fixed;
@@ -1329,6 +1386,8 @@
             </div>
         </header>
 
+        <div id="toast" class="toast" style="display: none;"></div>
+
         <main class="main">
             <div class="container" id="main-content">
                 <!-- Views rendered here -->
@@ -1499,16 +1558,22 @@
             const setUrl = (url) => localStorage.setItem(APPSCRIPT_KEY, url);
             const getLastSync = () => localStorage.getItem(SYNC_TIMESTAMP_KEY);
 
-            const formatRecord = (t) => ({
-                id: t.id,
-                tipo: t.tipo,
-                monto: t.monto,
-                categoria: t.categoria,
-                fecha: t.fecha,
-                descripcion: t.descripcion || '',
-                creado_en: t.creado_en,
-                actualizado_en: t.actualizado_en
-            });
+            const formatRecord = (t) => {
+                const cat = t.categoria;
+                const catStr = (typeof cat === 'object' && cat.nombre) 
+                    ? `{id=${cat.id}, nombre=${cat.nombre}, icono=${cat.icono}}`
+                    : String(cat || 'Otro');
+                return {
+                    id: t.id,
+                    tipo: t.tipo,
+                    monto: t.monto,
+                    categoria: catStr,
+                    fecha: t.fecha,
+                    descripcion: t.descripcion || '',
+                    creado_en: t.creado_en,
+                    actualizado_en: t.actualizado_en
+                };
+            };
 
             const testConnection = async () => {
                 const url = getUrl();
@@ -1521,21 +1586,20 @@
                 }
             };
 
-            const syncToSheet = async (records) => {
+            const syncToSheet = async (record) => {
                 const url = getUrl();
                 if (!url) return { success: false, message: 'URL no configurada' };
                 try {
-                    const payload = records.map(formatRecord);
-                    const res = await fetch(url, {
+                    const payload = formatRecord(record);
+                    console.log('syncToSheet - sending:', payload);
+                    await fetch(url, {
                         method: 'POST',
+                        mode: 'no-cors',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ action: 'insert', data: payload })
+                        body: JSON.stringify(payload)
                     });
-                    const result = await res.json();
-                    if (res.ok) {
-                        localStorage.setItem(SYNC_TIMESTAMP_KEY, new Date().toISOString());
-                    }
-                    return { success: true, result };
+                    localStorage.setItem(SYNC_TIMESTAMP_KEY, new Date().toISOString());
+                    return { success: true };
                 } catch (e) {
                     return { success: false, message: e.message };
                 }
@@ -1543,22 +1607,34 @@
 
             const syncIncremental = async (records) => {
                 const lastSync = localStorage.getItem(SYNC_TIMESTAMP_KEY);
+                console.log('syncIncremental - lastSync:', lastSync);
                 const newRecords = records.filter(t => {
-                    if (!t.creado_en) return true;
-                    return !lastSync || new Date(t.creado_en) > new Date(lastSync);
+                    if (!t.creado_en && !t.actualizado_en) return true;
+                    const created = t.creado_en ? new Date(t.creado_en) : new Date(0);
+                    const updated = t.actualizado_en ? new Date(t.actualizado_en) : new Date(0);
+                    const latest = new Date(Math.max(created, updated));
+                    console.log('syncIncremental - record:', t.id, 'creado_en:', t.creado_en, 'actualizado_en:', t.actualizado_en, 'latest:', latest, 'shouldSync:', !lastSync || latest > new Date(lastSync));
+                    return !lastSync || latest > new Date(lastSync);
                 });
                 if (newRecords.length === 0) {
                     return { success: true, message: 'No hay registros nuevos', synced: 0 };
                 }
-                return syncToSheet(newRecords);
+                console.log('syncIncremental - syncing:', newRecords);
+                let synced = 0;
+                for (const record of newRecords) {
+                    const result = await syncToSheet(record);
+                    console.log('syncToSheet result:', record.id, result);
+                    if (result.success) synced++;
+                }
+                return { success: true, message: `${synced} registros sincronizados`, synced };
             };
 
             const importFromSheet = async () => {
                 const url = getUrl();
                 if (!url) return { success: false, message: 'URL no configurada' };
                 try {
-                    const res = await fetch(url + '?action=fetch', { method: 'GET' });
-                    const data = await res.json();
+                    const response = await fetch(url);
+                    const data = await response.json();
                     return { success: true, data };
                 } catch (e) {
                     return { success: false, message: e.message };
@@ -1572,11 +1648,6 @@
         const store = createStore(savedState || initialState);
 
         store.subscribe(DataService.save);
-        store.subscribe((state) => {
-            if (state.transactions?.length > 0) {
-                SyncService.syncIncremental(state.transactions).catch(console.error);
-            }
-        });
 
         /**
          * Generador de ID único
@@ -2217,8 +2288,6 @@
                 transactions: [...currentTransactions, newTransaction]
             });
 
-            SyncService.syncToSheet([newTransaction]).catch(console.error);
-
             formMessage.innerHTML = '<div class="alert alert--success">Movimiento guardado correctamente</div>';
 
             setTimeout(() => {
@@ -2267,7 +2336,8 @@
                         monto,
                         fecha,
                         descripcion,
-                        categoria
+                        categoria,
+                        actualizado_en: new Date().toISOString()
                     };
                 }
                 return t;
@@ -2391,6 +2461,17 @@
             overlay.classList.remove('modal-overlay--active');
         };
 
+        const showToast = (message, type = 'info') => {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = 'toast toast--' + type;
+            toast.style.display = 'block';
+            setTimeout(() => {
+                toast.classList.add('hiding');
+                setTimeout(() => { toast.style.display = 'none'; }, 300);
+            }, 5000);
+        };
+
         window.openSettings = () => {
             const titleEl = document.getElementById('modal-title');
             const contentEl = document.getElementById('modal-content');
@@ -2411,7 +2492,6 @@
                         <button class="btn btn--secondary" style="flex: 1;" onclick="testAppscriptConnection()">Probar conexión</button>
                         <button class="btn btn--primary" style="flex: 1;" onclick="saveAppscriptUrl()">Guardar URL</button>
                     </div>
-                    <div id="sync-status" style="font-size: 12px; color: var(--text-secondary); display: none;"></div>
                     <hr style="border: none; border-top: 1px solid var(--border); width: 100%;">
                     <button class="btn btn--primary" style="width: 100%;" onclick="syncAllToSheet()">Sincronizar todo</button>
                     <button class="btn btn--secondary" style="width: 100%;" onclick="importFromSheet()">Importar desde hoja</button>
@@ -2436,69 +2516,84 @@
             const urlInput = document.getElementById('appscript-url');
             const url = urlInput.value.trim();
             SyncService.setUrl(url);
-            const status = document.getElementById('sync-status');
-            status.style.display = '';
-            status.textContent = 'URL guardada correctamente';
-            status.style.color = 'var(--success)';
+            showToast('URL guardada correctamente', 'success');
         };
 
         window.testAppscriptConnection = async () => {
-            const status = document.getElementById('sync-status');
-            status.style.display = '';
-            status.textContent = 'Probando conexión...';
-            const result = await SyncService.testConnection();
-            if (result.success) {
-                status.textContent = `✓ Conexión exitosa (status: ${result.status})`;
-                status.style.color = 'var(--success)';
-            } else {
-                status.textContent = `✗ Error: ${result.message}`;
-                status.style.color = 'var(--danger)';
+            const urlInput = document.getElementById('appscript-url');
+            const url = urlInput.value.trim();
+            if (!url) {
+                showToast('Ingresa una URL primero', 'error');
+                return;
+            }
+            showToast('Probando conexión...', 'info');
+            try {
+                await fetch(url, { method: 'GET', mode: 'no-cors' });
+                showToast('Conexión exitosa (envío en background)', 'success');
+            } catch (e) {
+                showToast(`Error: ${e.message}`, 'error');
             }
         };
 
         window.syncAllToSheet = async () => {
             const state = store.getState();
             if (state.transactions.length === 0) {
-                alert('No hay datos para sincronizar');
+                showToast('No hay datos para sincronizar', 'warning');
                 return;
             }
-            const status = document.getElementById('sync-status');
-            status.style.display = '';
-            status.textContent = 'Sincronizando...';
+            showToast('Sincronizando...', 'info');
             const result = await SyncService.syncIncremental(state.transactions);
             if (result.success) {
-                status.textContent = `✓ Sincronización exitosa (${result.synced || result.result?.length || '?'} registros)`;
-                status.style.color = 'var(--success)';
+                showToast(result.message, 'success');
             } else {
-                status.textContent = `✗ Error: ${result.message}`;
-                status.style.color = 'var(--danger)';
+                showToast(`Error: ${result.message}`, 'error');
             }
         };
 
-        window.importFromSheet = async () => {
-            const status = document.getElementById('sync-status');
-            status.style.display = '';
-            status.textContent = 'Importando...';
+window.importFromSheet = async () => {
+            showToast('Importando...', 'info');
             const result = await SyncService.importFromSheet();
-            if (result.success && result.data) {
+            console.log('importFromSheet result:', result);
+            if (result.success && Array.isArray(result.data) && result.data.length > 0) {
                 const state = store.getState();
-                const incoming = result.data.map(r => ({
-                    id: r.id || crypto.randomUUID(),
-                    tipo: r.tipo || 'Gasto',
-                    monto: parseFloat(r.monto) || 0,
-                    categoria: r.categoria || 'Otro',
-                    fecha: r.fecha || new Date().toISOString().slice(0, 10),
-                    descripcion: r.descripcion || ''
-                }));
+                const rows = result.data;
+                let records = [];
+                if (rows[0] && Array.isArray(rows[0]) && rows[0][0] === 'id') {
+                    const headers = rows[0];
+                    records = rows.slice(1).map(row => {
+                        const obj = {};
+                        headers.forEach((h, i) => { obj[h] = row[i]; });
+                        return obj;
+                    }).filter(r => r.id && String(r.id) !== 'id');
+                } else if (rows[0] && rows[0].id) {
+                    records = rows.filter(r => r.id && String(r.id) !== 'id');
+                }
+                const incoming = records.map(r => {
+                    const monto = parseFloat(r.monto);
+                    const catRaw = r.categoria ? String(r.categoria) : 'Otro';
+                    const catName = catRaw.replace(/\{id=\w+,\s*nombre=/, '').replace(/,\s*icono=./, '').replace(/}/, '') || 'Otro';
+                    const tipo = String(r.tipo || 'Gasto').toLowerCase().includes('ingreso') ? 'Ingreso' : 'Gasto';
+                    const catList = tipo === 'Ingreso' ? state.categoriesIngreso : state.categoriesGasto;
+                    const catObj = catList.find(c => c.nombre === catName) || catList[0] || { id: 'otro', nombre: 'Otro', icono: '📦' };
+                    return {
+                        id: r.id || crypto.randomUUID(),
+                        tipo,
+                        monto: isNaN(monto) ? 0 : monto,
+                        categoria: catObj,
+                        fecha: r.fecha ? String(r.fecha).slice(0, 10) : new Date().toISOString().slice(0, 10),
+                        descripcion: r.descripcion ? String(r.descripcion) : '',
+                        creado_en: r.creado_en || new Date().toISOString(),
+                        actualizado_en: r.actualizado_en || new Date().toISOString()
+                    };
+                }).filter(t => t.monto > 0);
                 const merged = [...state.transactions, ...incoming];
                 const unique = merged.filter((t, i, arr) => arr.findIndex(x => x.id === t.id) === i);
                 store.setState({ ...state, transactions: unique });
                 render();
                 closeModal();
-                alert(`Importados ${incoming.length} registros`);
+                showToast(`Importados ${incoming.length} registros`, 'success');
             } else {
-                status.textContent = `✗ Error: ${result.message}`;
-                status.style.color = 'var(--danger)';
+                showToast('No hay datos para importar', 'error');
             }
         };
 
@@ -2544,12 +2639,12 @@
                             });
                             render();
                             closeModal();
-                            alert('Datos importados correctamente');
+                            showToast('Datos importados correctamente', 'success');
                         } else {
-                            alert('Archivo no válido');
+                            showToast('Archivo no válido', 'error');
                         }
                     } catch (err) {
-                        alert('Error al leer el archivo');
+                        showToast('Error al leer el archivo', 'error');
                     }
                 };
                 reader.readAsText(file);
