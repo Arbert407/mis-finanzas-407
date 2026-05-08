@@ -2402,6 +2402,9 @@
                     <hr style="border: none; border-top: 1px solid var(--border); width: 100%;">
                     <button class="btn btn--primary" style="width: 100%;" onclick="syncAllToSheet()">Sincronizar todo</button>
                     <button class="btn btn--secondary" style="width: 100%;" onclick="importFromSheet()">Importar desde hoja</button>
+                    <hr style="border: none; border-top: 1px solid var(--border); width: 100%;">
+                    <button class="btn btn--secondary" style="width: 100%;" onclick="exportData()">Exportar JSON</button>
+                    <button class="btn btn--secondary" style="width: 100%;" onclick="importData()">Importar JSON</button>
                     ${lastSync ? `<div style="font-size: 11px; color: var(--text-secondary); text-align: center;">Última sincronización: ${new Date(lastSync).toLocaleString()}</div>` : ''}
                 </div>`;
 
@@ -2455,7 +2458,7 @@
                 status.style.color = 'var(--success)';
             } else {
                 status.textContent = `✗ Error: ${result.message}`;
-                status.style.color = 'var(--error)';
+                status.style.color = 'var(--danger)';
             }
         };
 
@@ -2482,7 +2485,7 @@
                 alert(`Importados ${incoming.length} registros`);
             } else {
                 status.textContent = `✗ Error: ${result.message}`;
-                status.style.color = 'var(--error)';
+                status.style.color = 'var(--danger)';
             }
         };
 
