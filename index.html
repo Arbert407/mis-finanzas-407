@@ -1207,7 +1207,7 @@
         /* Floating Action Button */
         .fab, a.fab {
             position: fixed;
-            bottom: 80px;
+            bottom: 40px;
             right: 24px;
             width: 60px;
             height: 60px;
@@ -2568,13 +2568,21 @@ window.importFromSheet = async () => {
                 } else if (rows[0] && rows[0].id) {
                     records = rows.filter(r => r.id && String(r.id) !== 'id');
                 }
-                const incoming = records.map(r => {
+const incoming = records.map(r => {
                     const monto = parseFloat(r.monto);
                     const catRaw = r.categoria ? String(r.categoria) : 'Otro';
-                    const catName = catRaw.replace(/\{id=\w+,\s*nombre=/, '').replace(/,\s*icono=./, '').replace(/}/, '') || 'Otro';
+                    let catName = 'Otro';
+                    if (catRaw.includes('nombre=')) {
+                        const match = catRaw.match(/nombre=([^,}]+)/);
+                        catName = match ? match[1] : 'Otro';
+                    } else if (catRaw !== '[object Object]') {
+                        catName = catRaw;
+                    }
                     const tipo = String(r.tipo || 'Gasto').toLowerCase().includes('ingreso') ? 'Ingreso' : 'Gasto';
                     const catList = tipo === 'Ingreso' ? state.categoriesIngreso : state.categoriesGasto;
-                    const catObj = catList.find(c => c.nombre === catName) || catList[0] || { id: 'otro', nombre: 'Otro', icono: '📦' };
+                    let catObj = catList.find(c => c.nombre.toLowerCase() === catName.toLowerCase());
+                    if (!catObj) catObj = catList.find(c => c.nombre.toLowerCase().includes(catName.toLowerCase()));
+                    if (!catObj) catObj = { id: 'otro', nombre: 'Otro', icono: '📦' };
                     return {
                         id: r.id || crypto.randomUUID(),
                         tipo,
