@@ -1482,6 +1482,7 @@
                         }
                         if (!parsed.selectedType) parsed.selectedType = 'Gasto';
                         if (!parsed.historyFilter) parsed.historyFilter = 'all';
+                        if (!parsed.appScriptUrl) parsed.appScriptUrl = '';
                         return parsed;
                     }
                     return null;
@@ -1490,10 +1491,80 @@
             };
         })();
 
+        const SyncService = (() => {
+            const APPSCRIPT_KEY = 'lifestats-appscript-url';
+            const SYNC_TIMESTAMP_KEY = 'lifestats-sync-timestamp';
+
+            const getUrl = () => localStorage.getItem(APPSCRIPT_KEY) || '';
+            const setUrl = (url) => localStorage.setItem(APPSCRIPT_KEY, url);
+            const getLastSync = () => localStorage.getItem(SYNC_TIMESTAMP_KEY);
+
+            const formatRecord = (t) => ({
+                id: t.id,
+                tipo: t.tipo,
+                monto: t.monto,
+                categoria: t.categoria,
+                fecha: t.fecha,
+                descripcion: t.descripcion || '',
+                creado_en: t.creado_en,
+                actualizado_en: t.actualizado_en
+            });
+
+            const testConnection = async () => {
+                const url = getUrl();
+                if (!url) return { success: false, message: 'URL no configurada' };
+                try {
+                    const res = await fetch(url, { method: 'GET' });
+                    return { success: res.ok, status: res.status };
+                } catch (e) {
+                    return { success: false, message: e.message };
+                }
+            };
+
+            const syncToSheet = async (records) => {
+                const url = getUrl();
+                if (!url) return { success: false, message: 'URL no configurada' };
+                try {
+                    const payload = records.map(formatRecord);
+                    const res = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'insert', data: payload })
+                    });
+                    const result = await res.json();
+                    if (res.ok) {
+                        localStorage.setItem(SYNC_TIMESTAMP_KEY, new Date().toISOString());
+                    }
+                    return { success: true, result };
+                } catch (e) {
+                    return { success: false, message: e.message };
+                }
+            };
+
+            const importFromSheet = async () => {
+                const url = getUrl();
+                if (!url) return { success: false, message: 'URL no configurada' };
+                try {
+                    const res = await fetch(url + '?action=fetch', { method: 'GET' });
+                    const data = await res.json();
+                    return { success: true, data };
+                } catch (e) {
+                    return { success: false, message: e.message };
+                }
+            };
+
+            return { getUrl, setUrl, getLastSync, testConnection, syncToSheet, importFromSheet, formatRecord };
+        })();
+
         const savedState = DataService.load(initialState);
         const store = createStore(savedState || initialState);
 
         store.subscribe(DataService.save);
+        store.subscribe((state) => {
+            if (state.transactions?.length > 0) {
+                SyncService.syncToSheet(state.transactions).catch(console.error);
+            }
+        });
 
         /**
          * Generador de ID único
@@ -2133,6 +2204,8 @@
                 transactions: [...currentTransactions, newTransaction]
             });
 
+            SyncService.syncToSheet([newTransaction]).catch(console.error);
+
             formMessage.innerHTML = '<div class="alert alert--success">Movimiento guardado correctamente</div>';
 
             setTimeout(() => {
@@ -2312,11 +2385,28 @@
             const confirmBtn = document.getElementById('modal-confirm');
             const importBtn = document.getElementById('modal-import');
 
+            const currentUrl = SyncService.getUrl();
+            const lastSync = SyncService.getLastSync();
+
+            const settingsHtml = `
+                <div id="settings-content" style="display: flex; flex-direction: column; gap: 12px;">
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <label style="font-size: 12px; color: var(--text-secondary);">URL de Apps Script</label>
+                        <input type="text" id="appscript-url" class="input" placeholder="https://script.google.com/..." value="${currentUrl}">
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="btn btn--secondary" style="flex: 1;" onclick="testAppscriptConnection()">Probar conexión</button>
+                        <button class="btn btn--primary" style="flex: 1;" onclick="saveAppscriptUrl()">Guardar URL</button>
+                    </div>
+                    <div id="sync-status" style="font-size: 12px; color: var(--text-secondary); display: none;"></div>
+                    <hr style="border: none; border-top: 1px solid var(--border); width: 100%;">
+                    <button class="btn btn--primary" style="width: 100%;" onclick="syncAllToSheet()">Sincronizar todo</button>
+                    <button class="btn btn--secondary" style="width: 100%;" onclick="importFromSheet()">Importar desde hoja</button>
+                    ${lastSync ? `<div style="font-size: 11px; color: var(--text-secondary); text-align: center;">Última sincronización: ${new Date(lastSync).toLocaleString()}</div>` : ''}
+                </div>`;
+
             titleEl.textContent = 'Ajustes';
-            contentEl.innerHTML = `<div id="settings-content" style="display: flex; flex-direction: column; gap: 8px;">
-                <button class="btn btn--primary" style="width: 100%;" onclick="importData()">Importar datos</button>
-                <button class="btn btn--secondary" style="width: 100%;" onclick="exportData()">Exportar datos</button>
-            </div>`;
+            contentEl.innerHTML = settingsHtml;
             cancelBtn.textContent = 'Cerrar';
             cancelBtn.onclick = closeModal;
             confirmBtn.style.display = 'none';
@@ -2324,6 +2414,76 @@
 
             const overlay = document.getElementById('modal-overlay');
             overlay.classList.add('modal-overlay--active');
+        };
+
+        window.saveAppscriptUrl = () => {
+            const urlInput = document.getElementById('appscript-url');
+            const url = urlInput.value.trim();
+            SyncService.setUrl(url);
+            const status = document.getElementById('sync-status');
+            status.style.display = '';
+            status.textContent = 'URL guardada correctamente';
+            status.style.color = 'var(--success)';
+        };
+
+        window.testAppscriptConnection = async () => {
+            const status = document.getElementById('sync-status');
+            status.style.display = '';
+            status.textContent = 'Probando conexión...';
+            const result = await SyncService.testConnection();
+            if (result.success) {
+                status.textContent = `✓ Conexión exitosa (status: ${result.status})`;
+                status.style.color = 'var(--success)';
+            } else {
+                status.textContent = `✗ Error: ${result.message}`;
+                status.style.color = 'var(--danger)';
+            }
+        };
+
+        window.syncAllToSheet = async () => {
+            const state = store.getState();
+            if (state.transactions.length === 0) {
+                alert('No hay datos para sincronizar');
+                return;
+            }
+            const status = document.getElementById('sync-status');
+            status.style.display = '';
+            status.textContent = 'Sincronizando...';
+            const result = await SyncService.syncToSheet(state.transactions);
+            if (result.success) {
+                status.textContent = '✓ Sincronización exitosa';
+                status.style.color = 'var(--success)';
+            } else {
+                status.textContent = `✗ Error: ${result.message}`;
+                status.style.color = 'var(--error)';
+            }
+        };
+
+        window.importFromSheet = async () => {
+            const status = document.getElementById('sync-status');
+            status.style.display = '';
+            status.textContent = 'Importando...';
+            const result = await SyncService.importFromSheet();
+            if (result.success && result.data) {
+                const state = store.getState();
+                const incoming = result.data.map(r => ({
+                    id: r.id || crypto.randomUUID(),
+                    tipo: r.tipo || 'Gasto',
+                    monto: parseFloat(r.monto) || 0,
+                    categoria: r.categoria || 'Otro',
+                    fecha: r.fecha || new Date().toISOString().slice(0, 10),
+                    descripcion: r.descripcion || ''
+                }));
+                const merged = [...state.transactions, ...incoming];
+                const unique = merged.filter((t, i, arr) => arr.findIndex(x => x.id === t.id) === i);
+                store.setState({ ...state, transactions: unique });
+                render();
+                closeModal();
+                alert(`Importados ${incoming.length} registros`);
+            } else {
+                status.textContent = `✗ Error: ${result.message}`;
+                status.style.color = 'var(--error)';
+            }
         };
 
         window.exportData = () => {
