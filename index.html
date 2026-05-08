@@ -1147,6 +1147,37 @@
             opacity: 1;
         }
 
+        /* Floating Action Button */
+        .fab, a.fab {
+            position: fixed !important;
+            bottom: 80px !important;
+            right: 24px !important;
+            width: 60px;
+            height: 60px;
+            border-radius: 50% !important;
+            background: var(--primary) !important;
+            color: var(--bg) !important;
+            border: none !important;
+            font-size: 52px !important;
+            font-weight: 400 !important;
+            cursor: pointer !important;
+            display: flex !important;
+            align-items: start !important;
+            justify-content: center !important;
+            z-index: 9999 !important;
+            box-shadow: 0 4px 20px rgba(76, 201, 240, 0.5);
+            text-decoration: none !important;
+        }
+
+        .fab:hover, a.fab:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 24px rgba(76, 201, 240, 0.6);
+        }
+
+        .fab:active, a.fab:active {
+            transform: scale(0.95);
+        }
+
         .calendar-legend {
             display: flex;
             align-items: center;
@@ -1306,12 +1337,15 @@
             </div>
         </div>
 
-        <footer class="footer">
-            <div class="container">
-                © 2026 albert.407 Finanzas Personales
-            </div>
-        </footer>
+        <a href="#/agregar" class="fab" style="position:fixed !important;bottom:46px !important;right:24px !important;display:grid !important;place-items:center;width:60px;height:60px;border-radius:50%;background:#4CC9F0;color:#0F172A;font-size:36px;font-weight:300;z-index:9999;box-shadow:0 4px 20px rgba(76,201,240,0.5);text-decoration:none;line-height:1;" title="Agregar movimiento">+</a>
     </div>
+
+    <footer class="footer">
+        <div class="container">
+            © 2026 albert.407 Finanzas Personales
+        </div>
+    </footer>
+</div>
 
     <script>
         /**
@@ -1587,7 +1621,6 @@
 
             nav.innerHTML = `
                 <a href="#/" class="nav__link ${currentView === 'home' ? 'nav__link--active' : ''}">Inicio</a>
-                <a href="#/agregar" class="nav__link ${currentView === 'add-transaction' ? 'nav__link--active' : ''}">Agregar</a>
                 <a href="#/historial" class="nav__link ${currentView === 'history' ? 'nav__link--active' : ''}">Historial</a>
             `;
         };
