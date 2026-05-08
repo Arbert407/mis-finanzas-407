@@ -1541,6 +1541,18 @@
                 }
             };
 
+            const syncIncremental = async (records) => {
+                const lastSync = localStorage.getItem(SYNC_TIMESTAMP_KEY);
+                const newRecords = records.filter(t => {
+                    if (!t.creado_en) return true;
+                    return !lastSync || new Date(t.creado_en) > new Date(lastSync);
+                });
+                if (newRecords.length === 0) {
+                    return { success: true, message: 'No hay registros nuevos', synced: 0 };
+                }
+                return syncToSheet(newRecords);
+            };
+
             const importFromSheet = async () => {
                 const url = getUrl();
                 if (!url) return { success: false, message: 'URL no configurada' };
@@ -1553,7 +1565,7 @@
                 }
             };
 
-            return { getUrl, setUrl, getLastSync, testConnection, syncToSheet, importFromSheet, formatRecord };
+            return { getUrl, setUrl, getLastSync, testConnection, syncToSheet, syncIncremental, importFromSheet, formatRecord };
         })();
 
         const savedState = DataService.load(initialState);
@@ -1562,7 +1574,7 @@
         store.subscribe(DataService.save);
         store.subscribe((state) => {
             if (state.transactions?.length > 0) {
-                SyncService.syncToSheet(state.transactions).catch(console.error);
+                SyncService.syncIncremental(state.transactions).catch(console.error);
             }
         });
 
@@ -2195,7 +2207,8 @@
                 monto,
                 fecha,
                 descripcion,
-                categoria
+                categoria,
+                creado_en: new Date().toISOString()
             };
 
             const currentTransactions = store.getState().transactions;
@@ -2452,9 +2465,9 @@
             const status = document.getElementById('sync-status');
             status.style.display = '';
             status.textContent = 'Sincronizando...';
-            const result = await SyncService.syncToSheet(state.transactions);
+            const result = await SyncService.syncIncremental(state.transactions);
             if (result.success) {
-                status.textContent = '✓ Sincronización exitosa';
+                status.textContent = `✓ Sincronización exitosa (${result.synced || result.result?.length || '?'} registros)`;
                 status.style.color = 'var(--success)';
             } else {
                 status.textContent = `✗ Error: ${result.message}`;
