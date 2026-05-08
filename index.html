@@ -2390,8 +2390,8 @@
             console.log('gastos-dia-chart canvas:', canvas);
             if (!canvas) return;
 
-            const weekDays = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-            const gastosPorDia = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
+            const weekDays = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+            const gastosPorDia = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 0: 0 };
 
             const now = new Date();
             const currentYear = now.getFullYear();
@@ -2412,8 +2412,8 @@
             });
 
             const dataByWeekDay = [
-                gastosPorDia[0], gastosPorDia[1], gastosPorDia[2],
-                gastosPorDia[3], gastosPorDia[4], gastosPorDia[5], gastosPorDia[6]
+                gastosPorDia[1], gastosPorDia[2], gastosPorDia[3],
+                gastosPorDia[4], gastosPorDia[5], gastosPorDia[6], gastosPorDia[0]
             ];
 
             new Chart(canvas, {
