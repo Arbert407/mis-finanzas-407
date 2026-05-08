@@ -1149,22 +1149,32 @@
 
         /* Floating Action Button */
         .fab, a.fab {
-            position: fixed !important;
-            bottom: 80px !important;
-            right: 24px !important;
+            position: fixed;
+            bottom: 80px;
+            right: 24px;
             width: 60px;
             height: 60px;
-            border-radius: 50% !important;
-            background: var(--primary) !important;
-            color: var(--bg) !important;
-            border: none !important;
-            font-size: 52px !important;
-            font-weight: 400 !important;
-            cursor: pointer !important;
-            display: flex !important;
-            align-items: start !important;
-            justify-content: center !important;
-            z-index: 9999 !important;
+            border-radius: 50%;
+            background: var(--primary);
+            color: var(--bg);
+            border: none;
+            font-size: 52px;
+            font-weight: 300;
+            cursor: pointer;
+            display: grid;
+            align-items: start;
+            justify-content: center;
+            z-index: 9999;
+            box-shadow: 0 4px 20px rgba(76, 201, 240, 0.5);
+            text-decoration: none;
+            line-height: 1;
+        }
+
+        .fab--hidden {
+            display: none !important;
+        }
+
+        .fab:hover {
             box-shadow: 0 4px 20px rgba(76, 201, 240, 0.5);
             text-decoration: none !important;
         }
@@ -1337,7 +1347,7 @@
             </div>
         </div>
 
-        <a href="#/agregar" class="fab" style="position:fixed !important;bottom:46px !important;right:24px !important;display:grid !important;place-items:center;width:60px;height:60px;border-radius:50%;background:#4CC9F0;color:#0F172A;font-size:36px;font-weight:300;z-index:9999;box-shadow:0 4px 20px rgba(76,201,240,0.5);text-decoration:none;line-height:1;" title="Agregar movimiento">+</a>
+        <a href="#/agregar" class="fab" title="Agregar movimiento">+</a>
     </div>
 
     <footer class="footer">
@@ -2201,6 +2211,8 @@
             switch (state.currentView) {
                 case 'home':
                     main.innerHTML = renderHomeView();
+                    const fabHome = document.querySelector('.fab');
+                    if (fabHome) fabHome.classList.remove('fab--hidden');
                     setTimeout(function() {
                         console.log('initGastosChart called');
                         initGastosChart();
@@ -2216,6 +2228,8 @@
                     break;
                 case 'add-transaction':
                     main.innerHTML = renderAddTransactionView();
+                    const fab = document.querySelector('.fab');
+                    if (fab) fab.classList.add('fab--hidden');
                     document.getElementById('transaction-form').addEventListener('submit', handleFormSubmit);
                     setTimeout(() => {
                         DatePicker.init(
@@ -2226,9 +2240,13 @@
                     break;
                 case 'history':
                     main.innerHTML = renderHistoryView();
+                    const fabHistory = document.querySelector('.fab');
+                    if (fabHistory) fabHistory.classList.remove('fab--hidden');
                     break;
                 case 'edit-transaction':
                     main.innerHTML = renderEditTransactionView();
+                    const fabEdit = document.querySelector('.fab');
+                    if (fabEdit) fabEdit.classList.add('fab--hidden');
                     if (state.editingId) {
                         document.getElementById('transaction-form').addEventListener('submit', (e) => handleEditFormSubmit(e, state.editingId));
                         setTimeout(() => {
