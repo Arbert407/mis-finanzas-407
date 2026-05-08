@@ -1067,6 +1067,102 @@
             border-radius: 3px;
         }
 
+        /* Calendar Heatmap */
+        .calendar-heatmap {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+            width: 100%;
+        }
+
+        .calendar-day {
+            aspect-ratio: 1;
+            border-radius: 4px;
+            background: var(--surface);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: var(--transition-fast);
+            position: relative;
+        }
+
+        .calendar-day:hover {
+            transform: scale(1.2);
+            z-index: 10;
+        }
+
+        .calendar-day--level-0 { background: var(--surface); }
+        .calendar-day--level-1 { background: rgba(239, 68, 68, 0.2); }
+        .calendar-day--level-2 { background: rgba(239, 68, 68, 0.4); }
+        .calendar-day--level-3 { background: rgba(239, 68, 68, 0.6); }
+        .calendar-day--level-4 { background: rgba(239, 68, 68, 0.8); }
+        .calendar-day--level-5 { background: var(--danger); color: white; }
+
+        .calendar-day--other {
+            background: transparent;
+            color: var(--text-muted);
+            opacity: 0.3;
+        }
+
+        .calendar-day--today {
+            border: 2px solid var(--primary);
+        }
+
+        .calendar-weekday-header {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+            margin-bottom: 8px;
+        }
+
+        .calendar-weekday-header__day {
+            text-align: center;
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        .calendar-tooltip {
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 12px;
+            white-space: nowrap;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 100;
+        }
+
+        .calendar-day:hover .calendar-tooltip {
+            opacity: 1;
+        }
+
+        .calendar-legend {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 4px;
+            margin-top: 12px;
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .calendar-legend__box {
+            width: 14px;
+            height: 14px;
+            border-radius: 3px;
+        }
+
         /* Dashboard */
         .dashboard-grid {
             display: grid;
@@ -1576,6 +1672,11 @@
                         </div>
                     </div>
                 </div>
+                <div class="dashboard-grid">
+                    <div class="card" style="grid-column: 1 / -1;">
+                        <div id="calendar-heatmap-container"></div>
+                    </div>
+                </div>
 
                 <h2 style="margin-top: 32px; margin-bottom: 16px; font-size: 20px;">Últimos Movimientos</h2>
                 ${lastTransactions.length > 0 ? `
@@ -2075,6 +2176,10 @@
                         console.log('initGastosDiaChart called');
                         initGastosDiaChart();
                     }, 200);
+                    setTimeout(function() {
+                        console.log('renderCalendarHeatmap called');
+                        renderCalendarHeatmap();
+                    }, 300);
                     break;
                 case 'add-transaction':
                     main.innerHTML = renderAddTransactionView();
@@ -2473,6 +2578,100 @@
                     }
                 }
             });
+        };
+
+        const renderCalendarHeatmap = () => {
+            const container = document.getElementById('calendar-heatmap-container');
+            if (!container) return;
+
+            const now = new Date();
+            const currentYear = now.getFullYear();
+            const currentMonth = now.getMonth();
+            const today = now.toDateString();
+
+            const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+            const weekDaysShort = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+
+            const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+            const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+            const daysInPrevMonth = new Date(currentYear, currentMonth, 0).getDate();
+
+            const adjustedFirstDay = firstDay === 0 ? 6 : firstDay - 1;
+
+            const isCurrentMonth = (dateStr) => {
+                const date = new Date(dateStr);
+                return date.getFullYear() === currentYear && date.getMonth() === currentMonth;
+            };
+
+            const transactions = store.getState().transactions;
+            const transactionsThisMonth = transactions.filter(t => isCurrentMonth(t.fecha) && t.tipo === 'Gasto');
+
+            const gastosPorDia = {};
+            transactionsThisMonth.forEach(t => {
+                const date = new Date(t.fecha);
+                const dia = date.getDate();
+                gastosPorDia[dia] = (gastosPorDia[dia] || 0) + t.monto;
+            });
+
+            const maxGasto = Math.max(...Object.values(gastosPorDia), 0);
+
+            const getLevel = (monto) => {
+                if (monto === 0) return 0;
+                if (maxGasto === 0) return 0;
+                const ratio = monto / maxGasto;
+                if (ratio <= 0.2) return 1;
+                if (ratio <= 0.4) return 2;
+                if (ratio <= 0.6) return 3;
+                if (ratio <= 0.8) return 4;
+                return 5;
+            };
+
+            let daysHtml = '';
+
+            for (let i = daysInPrevMonth - adjustedFirstDay + 1; i <= daysInPrevMonth; i++) {
+                daysHtml += `<div class="calendar-day calendar-day--other">${i}</div>`;
+            }
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dateStr = new Date(currentYear, currentMonth, day).toDateString();
+                const isToday = dateStr === today;
+                const monto = gastosPorDia[day] || 0;
+                const level = getLevel(monto);
+                const formattedMonto = monto > 0 ? formatCurrency(monto) : 'Sin gastos';
+                
+                daysHtml += `
+                    <div class="calendar-day calendar-day--level-${level} ${isToday ? 'calendar-day--today' : ''}">
+                        ${day}
+                        <div class="calendar-tooltip">
+                            <strong>${day} de ${monthNames[currentMonth]}</strong><br>
+                            ${formattedMonto}
+                        </div>
+                    </div>
+                `;
+            }
+
+            const remainingDays = 42 - (adjustedFirstDay + daysInMonth);
+            for (let i = 1; i <= remainingDays; i++) {
+                daysHtml += `<div class="calendar-day calendar-day--other">${i}</div>`;
+            }
+
+            container.innerHTML = `
+                <div class="chart-card__title">Gastos por Día del Mes</div>
+                <div class="calendar-weekday-header">
+                    ${weekDaysShort.map(d => `<div class="calendar-weekday-header__day">${d}</div>`).join('')}
+                </div>
+                <div class="calendar-heatmap">${daysHtml}</div>
+                <div class="calendar-legend">
+                    <span>Menos</span>
+                    <div class="calendar-legend__box calendar-day--level-0"></div>
+                    <div class="calendar-legend__box calendar-day--level-1"></div>
+                    <div class="calendar-legend__box calendar-day--level-2"></div>
+                    <div class="calendar-legend__box calendar-day--level-3"></div>
+                    <div class="calendar-legend__box calendar-day--level-4"></div>
+                    <div class="calendar-legend__box calendar-day--level-5"></div>
+                    <span>Más</span>
+                </div>
+            `;
         };
 
         const DatePicker = (() => {
