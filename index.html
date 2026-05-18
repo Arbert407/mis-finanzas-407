@@ -1857,7 +1857,7 @@
                         </div>
                     </div>
                     <div class="card chart-card">
-                        <div class="chart-card__title">Ingresos vs Gastos por Semana</div>
+                        <div class="chart-card__title">Movimientos por Semana</div>
                         <div class="chart-container chart-container--bar">
                             <canvas id="comparacion-chart"></canvas>
                         </div>
@@ -2882,33 +2882,47 @@ const incoming = records.map(r => {
                             {
                                 label: 'Ingresos',
                                 data: [ingresosPorSemana[1], ingresosPorSemana[2], ingresosPorSemana[3], ingresosPorSemana[4]],
-                                backgroundColor: '#22C55E',
-                                borderRadius: 12,
+                                backgroundColor: 'rgba(34, 197, 94, 0.85)',
+                                borderColor: '#22C55E',
+                                borderWidth: 2,
+                                borderRadius: 8,
                                 borderSkipped: false,
-                                barThickness: 40
+                                barPercentage: 0.7,
+                                categoryPercentage: 0.8
                             },
                             {
                                 label: 'Gastos',
                                 data: [gastosPorSemana[1], gastosPorSemana[2], gastosPorSemana[3], gastosPorSemana[4]],
-                                backgroundColor: '#EF4444',
-                                borderRadius: 12,
+                                backgroundColor: 'rgba(239, 68, 68, 0.85)',
+                                borderColor: '#EF4444',
+                                borderWidth: 2,
+                                borderRadius: 8,
                                 borderSkipped: false,
-                                barThickness: 40
+                                barPercentage: 0.7,
+                                categoryPercentage: 0.8
                             }
                         ]
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: true,
+                        animation: {
+                            duration: 800,
+                            easing: 'easeOutQuart'
+                        },
                         plugins: {
                             legend: { 
                                 display: true,
                                 position: 'bottom',
                                 labels: {
                                     color: '#9CA3AF',
-                                    padding: 16,
+                                    padding: 20,
                                     usePointStyle: true,
-                                    pointStyle: 'circle'
+                                    pointStyle: 'rectRounded',
+                                    pointStyleOptions: {
+                                        cornerRadius: 4
+                                    },
+                                    font: { size: 12, weight: '500' }
                                 }
                             },
                             tooltip: {
@@ -2919,8 +2933,10 @@ const incoming = records.map(r => {
                                 borderWidth: 1,
                                 cornerRadius: 12,
                                 padding: 12,
+                                displayColors: true,
+                                boxPadding: 6,
                                 callbacks: {
-                                    label: (context) => `${context.dataset.label}: ${formatCurrency(context.parsed.y)}`
+                                    label: (context) => ` ${context.dataset.label}: ${formatCurrency(context.parsed.y)}`
                                 }
                             },
                         },
@@ -2928,19 +2944,23 @@ const incoming = records.map(r => {
                             y: {
                                 beginAtZero: true,
                                 grid: {
-                                    color: 'rgba(255,255,255,0.1)'
+                                    color: 'rgba(255,255,255,0.08)'
                                 },
                                 ticks: {
                                     color: '#9CA3AF',
+                                    font: { size: 11 },
                                     callback: (value) => formatCurrency(value)
-                                }
+                                },
+                                border: { display: false }
                             },
                             x: {
                                 grid: { display: false },
                                 ticks: {
                                     color: '#E5E7EB',
-                                    font: { weight: '600' }
-                                }
+                                    font: { size: 11, weight: '600' },
+                                    padding: 8
+                                },
+                                border: { display: false }
                             }
                         }
                     }
