@@ -1868,15 +1868,20 @@
                             <canvas id="boxplot-chart"></canvas>
                         </div>
                     </div>
-                    <div class="card chart-card">
+                </div>
+                <h2 style="margin-top: 32px; margin-bottom: 16px; font-size: 20px;">Gastos del Mes</h2>
+                <div class="dashboard-grid">
+                    <div class="card chart-card" style="grid-column: 1 / -1;">
                         <div class="chart-card__title">Gastos por Día</div>
                         <div class="chart-container chart-container--wide">
                             <canvas id="gastos-dia-chart"></canvas>
                         </div>
                     </div>
                 </div>
-
-                <h2 style="margin-top: 32px; margin-bottom: 16px; font-size: 20px;">Calendario de Actividad</h2>
+                <div class="dashboard-grid">
+                    <div class="card" style="grid-column: 1 / -1;">
+                        <div id="calendar-heatmap-container"></div>
+                    </div>
                 </div>
 
                 <h2 style="margin-top: 32px; margin-bottom: 16px; font-size: 20px;">Últimos Movimientos</h2>
@@ -3222,70 +3227,60 @@ let boxplotChart = null;
             console.log('gastos-dia-chart canvas:', canvas);
             if (!canvas) return;
 
+            const weekDays = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+            const gastosPorDia = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 0: 0 };
+
             const now = new Date();
             const currentYear = now.getFullYear();
             const currentMonth = now.getMonth();
-            const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-            const daysInPrevMonth = new Date(currentYear, currentMonth, 0).getDate();
 
-            const labels = [];
-            const gastosData = [];
-            const diasConGastos = {};
-
-            for (let d = 1; d <= daysInMonth; d++) {
-                labels.push(d);
-                diasConGastos[d] = 0;
-            }
+            const isCurrentMonth = (dateStr) => {
+                const date = new Date(dateStr);
+                return date.getFullYear() === currentYear && date.getMonth() === currentMonth;
+            };
 
             const transactions = store.getState().transactions;
+            const transactionsThisMonth = transactions.filter(t => isCurrentMonth(t.fecha));
 
-            transactions.forEach(t => {
+            transactionsThisMonth.filter(t => t.tipo === 'Gasto').forEach(t => {
                 const dateStr = t.fecha;
-                if (!dateStr) return;
-                
                 let date;
-                if (dateStr.includes('T')) {
+                if (dateStr && dateStr.includes('T')) {
                     date = new Date(dateStr);
-                } else {
+                } else if (dateStr) {
                     date = new Date(dateStr + 'T12:00:00');
                 }
-                
-                if (t.tipo === 'Gasto' && 
-                    date.getFullYear() === currentYear && 
-                    date.getMonth() === currentMonth) {
-                    const day = date.getDate();
-                    diasConGastos[day] = (diasConGastos[day] || 0) + t.monto;
-                }
+                const dayOfWeek = date.getDay();
+                gastosPorDia[dayOfWeek] = (gastosPorDia[dayOfWeek] || 0) + t.monto;
             });
 
-            for (let d = 1; d <= daysInMonth; d++) {
-                gastosData.push(diasConGastos[d]);
-            }
-
-            const maxGasto = Math.max(...gastosData);
-            const hasData = maxGasto > 0;
+            const dataByWeekDay = [
+                gastosPorDia[1], gastosPorDia[2], gastosPorDia[3],
+                gastosPorDia[4], gastosPorDia[5], gastosPorDia[6], gastosPorDia[0]
+            ];
 
             new Chart(canvas, {
-                type: 'bar',
+                type: 'line',
                 data: {
-                    labels: labels,
+                    labels: weekDays,
                     datasets: [{
-                        label: 'Gastos',
-                        data: gastosData,
-                        backgroundColor: hasData ? function(context) {
-                            const value = context.raw;
-                            const opacity = value > 0 ? 0.3 + (value / maxGasto) * 0.7 : 0.1;
-                            return `rgba(239, 68, 68, ${opacity})`;
-                        } : 'rgba(239, 68, 68, 0.3)',
+                        data: dataByWeekDay,
                         borderColor: '#EF4444',
-                        borderWidth: hasData ? 1 : 0,
-                        borderRadius: 4,
-                        barPercentage: 0.8
+                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: '#EF4444',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        pointRadius: 6,
+                        pointHoverRadius: 8
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    aspectRatio: 2.5,
                     plugins: {
                         legend: { display: false },
                         tooltip: {
@@ -3297,37 +3292,11 @@ let boxplotChart = null;
                             cornerRadius: 12,
                             padding: 12,
                             callbacks: {
-                                title: (items) => `Día ${items[0].label}`,
-                                label: (context) => formatCurrency(context.parsed.y)
+                                label: function(context) {
+                                    return formatCurrency(context.parsed.y);
+                                }
                             }
                         }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            grid: {
-                                color: 'rgba(255,255,255,0.06)'
-                            },
-                            ticks: {
-                                color: '#9CA3AF',
-                                font: { size: 10 },
-                                callback: (value) => formatCurrency(value)
-                            },
-                            border: { display: false }
-                        },
-                        x: {
-                            grid: { display: false },
-                            ticks: {
-                                color: '#9CA3AF',
-                                font: { size: 10 },
-                                stepSize: 5
-                            },
-                            border: { display: false }
-                        }
-                    }
-                }
-            });
-        };
                     },
                     scales: {
                         y: {
