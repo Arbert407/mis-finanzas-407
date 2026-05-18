@@ -1857,9 +1857,15 @@
                         </div>
                     </div>
                     <div class="card chart-card">
-                        <div class="chart-card__title">Ingresos vs Gastos</div>
+                        <div class="chart-card__title">Gastos por Semana</div>
                         <div class="chart-container chart-container--bar">
                             <canvas id="comparacion-chart"></canvas>
+                        </div>
+                    </div>
+                    <div class="card chart-card">
+                        <div class="chart-card__title">Distribución de Gastos</div>
+                        <div class="chart-container chart-container--bar">
+                            <canvas id="boxplot-chart"></canvas>
                         </div>
                     </div>
                 </div>
@@ -2294,7 +2300,7 @@
             formMessage.innerHTML = '<div class="alert alert--success">Movimiento guardado correctamente</div>';
 
             setTimeout(() => {
-                navigate('/historial');
+                navigate('/');
             }, 1500);
         };
 
@@ -2354,7 +2360,7 @@
             formMessage.innerHTML = '<div class="alert alert--success">Movimiento actualizado correctamente</div>';
 
             setTimeout(() => {
-                navigate('/historial');
+                navigate('/');
             }, 1500);
         };
 
@@ -2380,6 +2386,10 @@
                         console.log('initGastosDiaChart called');
                         initGastosDiaChart();
                     }, 200);
+                    setTimeout(function() {
+                        console.log('initBoxplotChart called');
+                        initBoxplotChart();
+                    }, 250);
                     setTimeout(function() {
                         console.log('renderCalendarHeatmap called');
                         renderCalendarHeatmap();
@@ -2586,12 +2596,22 @@ const incoming = records.map(r => {
                     let catObj = catList.find(c => c.nombre.toLowerCase() === catName.toLowerCase());
                     if (!catObj) catObj = catList.find(c => c.nombre.toLowerCase().includes(catName.toLowerCase()));
                     if (!catObj) catObj = { id: 'otro', nombre: 'Otro', icono: '📦' };
+                    
+                    let fechaStr = r.fecha ? String(r.fecha) : '';
+                    if (fechaStr && fechaStr.length > 0) {
+                        if (fechaStr.length <= 10) {
+                            fechaStr = fechaStr + 'T12:00:00';
+                        } else if (!fechaStr.includes('T')) {
+                            fechaStr = fechaStr + ':00';
+                        }
+                    }
+                    
                     return {
                         id: r.id || crypto.randomUUID(),
                         tipo,
                         monto: isNaN(monto) ? 0 : monto,
                         categoria: catObj,
-                        fecha: r.fecha ? String(r.fecha).slice(0, 10) : new Date().toISOString().slice(0, 10),
+                        fecha: fechaStr || new Date().toISOString(),
                         descripcion: r.descripcion ? String(r.descripcion) : '',
                         creado_en: r.creado_en || new Date().toISOString(),
                         actualizado_en: r.actualizado_en || new Date().toISOString()
@@ -2760,24 +2780,106 @@ const incoming = records.map(r => {
                     comparacionChart.destroy();
                 }
 
-                const totalIngresos = transactionsThisMonth
-                    .filter(t => t.tipo === 'Ingreso')
-                    .reduce((sum, t) => sum + t.monto, 0);
+                const getWeekOfMonth = (date) => {
+                    const day = date.getDate();
+                    const year = date.getFullYear();
+                    const month = date.getMonth();
+                    const firstDay = new Date(year, month, 1);
+                    const firstDayOfWeek = firstDay.getDay();
+                    
+                    let firstSunday;
+                    if (firstDayOfWeek === 0) {
+                        firstSunday = 1;
+                    } else {
+                        firstSunday = 7 - firstDayOfWeek + 1;
+                    }
+                    
+                    if (day <= firstSunday) {
+                        return 1;
+                    }
+                    
+                    const daysIntoWeeks = day - firstSunday - 1;
+                    const weekNum = Math.floor(daysIntoWeeks / 7) + 2;
+                    return Math.min(4, weekNum);
+                };
 
-                const totalGastos = transactionsThisMonth
-                    .filter(t => t.tipo === 'Gasto')
-                    .reduce((sum, t) => sum + t.monto, 0);
+                const firstDayOfMonth = new Date(currentYear, currentMonth, 1);
+                const firstDayOfWeek = firstDayOfMonth.getDay();
+                const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+                
+                let firstSunday;
+                if (firstDayOfWeek === 0) {
+                    firstSunday = 1;
+                } else {
+                    firstSunday = 7 - firstDayOfWeek + 1;
+                }
+                
+                let week1End = firstSunday;
+                
+                let week2Start = firstSunday + 1;
+                let week2End = week2Start + 6;
+                week2End = Math.min(week2End, daysInMonth);
+                
+                let week3Start = week2End + 1;
+                let week3End = week3Start + 6;
+                week3End = Math.min(week3End, daysInMonth);
+                
+                let week4Start = week3End + 1;
+                let week4End = daysInMonth;
+
+                const monthName = new Date(currentYear, currentMonth, 1).toLocaleDateString('es-ES', { month: 'short' });
+                const monthCap = monthName.charAt(0).toUpperCase() + monthName.slice(1);
+
+                const labels = [
+                    `${1}-${week1End} ${monthCap}`,
+                    `${week2Start}-${week2End} ${monthCap}`,
+                    `${week3Start}-${week3End} ${monthCap}`,
+                    `${week4Start}-${week4End} ${monthCap}`
+                ];
+
+                const gastosPorSemana = { 1: 0, 2: 0, 3: 0, 4: 0 };
+
+                const expensesThisMonth = transactions.filter(t => {
+                    const dateStr = t.fecha;
+                    let date;
+                    if (dateStr && dateStr.includes('T')) {
+                        date = new Date(dateStr);
+                    } else if (dateStr) {
+                        date = new Date(dateStr + 'T12:00:00');
+                    } else {
+                        return false;
+                    }
+                    return t.tipo === 'Gasto' && 
+                           date.getFullYear() === currentYear && 
+                           date.getMonth() === currentMonth;
+                });
+
+                expensesThisMonth.forEach(t => {
+                    const dateStr = t.fecha;
+                    let date;
+                    if (dateStr && dateStr.includes('T')) {
+                        date = new Date(dateStr);
+                    } else if (dateStr) {
+                        date = new Date(dateStr + 'T12:00:00');
+                    } else {
+                        return;
+                    }
+                    const week = getWeekOfMonth(date);
+                    if (week >= 1 && week <= 4) {
+                        gastosPorSemana[week] = (gastosPorSemana[week] || 0) + t.monto;
+                    }
+                });
 
                 comparacionChart = new Chart(canvasComparacion, {
                     type: 'bar',
                     data: {
-                        labels: ['Ingresos', 'Gastos'],
+                        labels: labels,
                         datasets: [{
-                            data: [totalIngresos, totalGastos],
-                            backgroundColor: ['#22C55E', '#EF4444'],
+                            data: [gastosPorSemana[1], gastosPorSemana[2], gastosPorSemana[3], gastosPorSemana[4]],
+                            backgroundColor: '#EF4444',
                             borderRadius: 12,
                             borderSkipped: false,
-                            barThickness: 60
+                            barThickness: 40
                         }]
                     },
                     options: {
@@ -2822,6 +2924,259 @@ const incoming = records.map(r => {
             }
         };
 
+let boxplotChart = null;
+
+        const initBoxplotChart = () => {
+            const canvas = document.getElementById('boxplot-chart');
+            if (!canvas) return;
+
+            if (boxplotChart) {
+                boxplotChart.destroy();
+            }
+
+            const now = new Date();
+            const currentYear = now.getFullYear();
+            const currentMonth = now.getMonth();
+
+            const firstDayOfMonth = new Date(currentYear, currentMonth, 1);
+            const firstDayOfWeek = firstDayOfMonth.getDay();
+            const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+            
+            let firstSunday;
+            if (firstDayOfWeek === 0) {
+                firstSunday = 1;
+            } else {
+                firstSunday = 7 - firstDayOfWeek + 1;
+            }
+            
+            let week1End = firstSunday;
+            
+            let week2Start = firstSunday + 1;
+            let week2End = week2Start + 6;
+            week2End = Math.min(week2End, daysInMonth);
+            
+            let week3Start = week2End + 1;
+            let week3End = week3Start + 6;
+            week3End = Math.min(week3End, daysInMonth);
+            
+            let week4Start = week3End + 1;
+            let week4End = daysInMonth;
+
+            const monthName = new Date(currentYear, currentMonth, 1).toLocaleDateString('es-ES', { month: 'short' });
+            const monthCap = monthName.charAt(0).toUpperCase() + monthName.slice(1);
+
+            const weekLabels = [
+                '1-' + week1End + ' ' + monthCap,
+                week2Start + '-' + week2End + ' ' + monthCap,
+                week3Start + '-' + week3End + ' ' + monthCap,
+                week4Start + '-' + week4End + ' ' + monthCap
+            ];
+
+            const getWeekOfMonth = (date) => {
+                const day = date.getDate();
+                if (day <= firstSunday) {
+                    return 1;
+                }
+                const daysIntoWeeks = day - firstSunday - 1;
+                const weekNum = Math.floor(daysIntoWeeks / 7) + 2;
+                return Math.min(4, weekNum);
+            };
+
+            const transactions = store.getState().transactions;
+            const gastosPorSemana = { 1: [], 2: [], 3: [], 4: [] };
+
+            transactions.filter(function(t) {
+                const dateStr = t.fecha;
+                let date;
+                if (dateStr && dateStr.includes('T')) {
+                    date = new Date(dateStr);
+                } else if (dateStr) {
+                    date = new Date(dateStr + 'T12:00:00');
+                } else {
+                    return false;
+                }
+                return t.tipo === 'Gasto' && 
+                       date.getFullYear() === currentYear && 
+                       date.getMonth() === currentMonth;
+            }).forEach(function(t) {
+                const dateStr = t.fecha;
+                let date;
+                if (dateStr && dateStr.includes('T')) {
+                    date = new Date(dateStr);
+                } else if (dateStr) {
+                    date = new Date(dateStr + 'T12:00:00');
+                } else {
+                    return;
+                }
+                const week = getWeekOfMonth(date);
+                if (week >= 1 && week <= 4) {
+                    gastosPorSemana[week].push(t.monto);
+                }
+            });
+
+            const calculateStats = (arr) => {
+                if (arr.length === 0) return { min: 0, q1: 0, median: 0, q3: 0, max: 0, mean: 0, std: 0 };
+                if (arr.length === 1) return { min: arr[0], q1: arr[0], median: arr[0], q3: arr[0], max: arr[0], mean: arr[0], std: 0 };
+                
+                const sorted = [...arr].sort((a, b) => a - b);
+                const n = sorted.length;
+                const sum = sorted.reduce((a, b) => a + b, 0);
+                const mean = sum / n;
+                const variance = sorted.reduce((acc, val) => acc + Math.pow(val - mean, 2), 0) / n;
+                const std = Math.sqrt(variance);
+
+                const q1Idx = Math.floor(n * 0.25);
+                const medianIdx = Math.floor(n * 0.5);
+                const q3Idx = Math.floor(n * 0.75);
+
+                return {
+                    min: sorted[0],
+                    q1: sorted[q1Idx],
+                    median: sorted[medianIdx],
+                    q3: sorted[q3Idx],
+                    max: sorted[n - 1],
+                    mean: mean,
+                    std: std
+                };
+            };
+
+            const boxData = weekLabels.map(function(label, idx) {
+                const stats = calculateStats(gastosPorSemana[idx + 1]);
+                return {
+                    x: label,
+                    min: stats.min,
+                    q1: stats.q1,
+                    median: stats.median,
+                    q3: stats.q3,
+                    max: stats.max,
+                    mean: stats.mean,
+                    std: stats.std
+                };
+            });
+
+            boxplotChart = new Chart(canvas, {
+                type: 'bar',
+                data: {
+                    labels: weekLabels,
+                    datasets: [{
+                        label: 'Rango',
+                        data: boxData.map(function(d) { return [d.min, d.max]; }),
+                        backgroundColor: 'rgba(76, 201, 240, 0.2)',
+                        borderColor: '#4CC9F0',
+                        borderWidth: 1,
+                        borderSkipped: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                            titleColor: '#E5E7EB',
+                            bodyColor: '#9CA3AF',
+                            borderColor: 'rgba(255,255,255,0.12)',
+                            borderWidth: 1,
+                            cornerRadius: 12,
+                            padding: 12,
+                            callbacks: {
+                                label: function(context) {
+                                    const data = boxData[context.dataIndex];
+                                    return [
+                                        'Min: ' + formatCurrency(data.min),
+                                        'Q1: ' + formatCurrency(data.q1),
+                                        'Mediana: ' + formatCurrency(data.median),
+                                        'Q3: ' + formatCurrency(data.q3),
+                                        'Max: ' + formatCurrency(data.max),
+                                        'Media: ' + formatCurrency(data.mean),
+                                        'DE: ' + formatCurrency(data.std)
+                                    ];
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(255,255,255,0.1)' },
+                            ticks: {
+                                color: '#9CA3AF',
+                                callback: function(value) { return formatCurrency(value); }
+                            }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: '#E5E7EB' }
+                        }
+                    }
+                },
+                plugins: [{
+                    id: 'boxplot-whiskers',
+                    afterDatasetsDraw: function(chart) {
+                        const ctx = chart.ctx;
+                        const xAxis = chart.scales.x;
+                        const yAxis = chart.scales.y;
+
+                        boxData.forEach(function(data, idx) {
+                            const x = xAxis.getPixelForValue(weekLabels[idx]);
+                            const barWidth = 40;
+
+                            const yMin = yAxis.getPixelForValue(data.min);
+                            const yQ1 = yAxis.getPixelForValue(data.q1);
+                            const yMedian = yAxis.getPixelForValue(data.median);
+                            const yQ3 = yAxis.getPixelForValue(data.q3);
+                            const yMax = yAxis.getPixelForValue(data.max);
+
+                            ctx.save();
+                            ctx.strokeStyle = '#4CC9F0';
+                            ctx.lineWidth = 2;
+
+                            ctx.beginPath();
+                            ctx.moveTo(x, yMin);
+                            ctx.lineTo(x, yQ1);
+                            ctx.stroke();
+
+                            ctx.beginPath();
+                            ctx.moveTo(x, yQ3);
+                            ctx.lineTo(x, yMax);
+                            ctx.stroke();
+
+                            ctx.beginPath();
+                            ctx.moveTo(x - 10, yMin);
+                            ctx.lineTo(x + 10, yMin);
+                            ctx.stroke();
+
+                            ctx.beginPath();
+                            ctx.moveTo(x - 10, yMax);
+                            ctx.lineTo(x + 10, yMax);
+                            ctx.stroke();
+
+                            ctx.fillStyle = 'rgba(76, 201, 240, 0.3)';
+                            ctx.fillRect(x - barWidth/2, yQ3, barWidth, yQ1 - yQ3);
+
+                            ctx.strokeStyle = '#4CC9F0';
+                            ctx.lineWidth = 2;
+                            ctx.strokeRect(x - barWidth/2, yQ3, barWidth, yQ1 - yQ3);
+
+                            ctx.beginPath();
+                            ctx.moveTo(x - barWidth/2, yMedian);
+                            ctx.lineTo(x + barWidth/2, yMedian);
+                            ctx.stroke();
+
+                            if (data.std > 0) {
+                                ctx.fillStyle = '#EF4444';
+                                ctx.font = '12px Inter';
+                                ctx.textAlign = 'center';
+                                ctx.fillText('+' + Math.round(data.std), x + barWidth/2 + 25, yAxis.getPixelForValue(data.mean));
+                            }
+
+                            ctx.restore();
+                        });
+                    }
+                }]
+            });
+        };
+
         const initGastosDiaChart = () => {
             console.log('initGastosDiaChart executing');
             const canvas = document.getElementById('gastos-dia-chart');
@@ -2844,7 +3199,13 @@ const incoming = records.map(r => {
             const transactionsThisMonth = transactions.filter(t => isCurrentMonth(t.fecha));
 
             transactionsThisMonth.filter(t => t.tipo === 'Gasto').forEach(t => {
-                const date = new Date(t.fecha);
+                const dateStr = t.fecha;
+                let date;
+                if (dateStr && dateStr.includes('T')) {
+                    date = new Date(dateStr);
+                } else if (dateStr) {
+                    date = new Date(dateStr + 'T12:00:00');
+                }
                 const dayOfWeek = date.getDay();
                 gastosPorDia[dayOfWeek] = (gastosPorDia[dayOfWeek] || 0) + t.monto;
             });
@@ -2941,7 +3302,13 @@ const incoming = records.map(r => {
 
             const gastosPorDia = {};
             transactionsThisMonth.forEach(t => {
-                const date = new Date(t.fecha);
+                const dateStr = t.fecha;
+                let date;
+                if (dateStr && dateStr.includes('T')) {
+                    date = new Date(dateStr);
+                } else if (dateStr) {
+                    date = new Date(dateStr + 'T12:00:00');
+                }
                 const dia = date.getDate();
                 gastosPorDia[dia] = (gastosPorDia[dia] || 0) + t.monto;
             });
