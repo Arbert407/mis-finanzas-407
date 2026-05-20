@@ -106,23 +106,139 @@ const initBoxplotChart = () => {
     if (boxplotChart) boxplotChart.destroy();
 
     const now = new Date();
-    const transactions = store.getState().transactions.filter(t => {
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+    const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+    const firstSunday = firstDay === 0 ? 1 : 7 - firstDay + 1;
+    const monthName = new Date(currentYear, currentMonth, 1).toLocaleDateString('es-ES', { month: 'short' });
+    const monthCap = monthName.charAt(0).toUpperCase() + monthName.slice(1);
+
+    const labels = [`1-${firstSunday} ${monthCap}`, `${firstSunday + 1}-${Math.min(firstSunday + 7, daysInMonth)} ${monthCap}`, `${Math.min(firstSunday + 8, daysInMonth)}-${Math.min(firstSunday + 14, daysInMonth)} ${monthCap}`, `${Math.min(firstSunday + 15, daysInMonth)}-${daysInMonth} ${monthCap}`];
+
+    const semanas = { 1: [], 2: [], 3: [], 4: [] };
+    store.getState().transactions.filter(t => {
         const d = new Date(t.fecha.includes('T') ? t.fecha : t.fecha + 'T12:00:00');
-        return t.tipo === 'Gasto' && d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+        return t.tipo === 'Gasto' && d.getFullYear() === currentYear && d.getMonth() === currentMonth;
+    }).forEach(t => {
+        const d = new Date(t.fecha.includes('T') ? t.fecha : t.fecha + 'T12:00:00');
+        const day = d.getDate();
+        const week = day <= firstSunday ? 1 : Math.min(4, Math.floor((day - firstSunday - 1) / 7) + 2);
+        semanas[week].push(t.monto);
     });
 
-    const arr = transactions.map(t => t.monto).sort((a, b) => a - b);
-    const min = arr[0] || 0, max = arr[arr.length - 1] || 0;
-    const median = arr.length ? arr[Math.floor(arr.length / 2)] : 0;
+    const calculateStats = (arr) => {
+        if (!arr.length) return { min: 0, q1: 0, median: 0, q3: 0, max: 0, avg: 0, std: 0 };
+        const sorted = [...arr].sort((a, b) => a - b);
+        const n = sorted.length;
+        const sum = sorted.reduce((a, b) => a + b, 0);
+        const avg = sum / n;
+        const variance = sorted.reduce((acc, val) => acc + Math.pow(val - avg, 2), 0) / n;
+        const std = Math.sqrt(variance);
+        
+        const getPercentile = (p) => {
+            const idx = (p / 100) * (n - 1);
+            const lower = Math.floor(idx);
+            const upper = Math.ceil(idx);
+            if (lower === upper) return sorted[lower];
+            return sorted[lower] + (sorted[upper] - sorted[lower]) * (idx - lower);
+        };
+
+        return {
+            min: sorted[0],
+            q1: getPercentile(25),
+            median: getPercentile(50),
+            q3: getPercentile(75),
+            max: sorted[n - 1],
+            avg,
+            std
+        };
+    };
+
+    const boxData = [];
+    const medianLineData = [];
+    const statsData = [];
+    
+    for (let w = 1; w <= 4; w++) {
+        const stats = calculateStats(semanas[w]);
+        statsData.push(stats);
+        boxData.push([stats.q1, stats.q3]);
+        medianLineData.push(stats.median);
+    }
 
     boxplotChart = new Chart(canvas, {
         type: 'bar',
-        data: { labels: ['Rango'], datasets: [{ label: 'Rango', data: [[min, max]], backgroundColor: 'rgba(76, 201, 240, 0.2)', borderColor: '#4CC9F0', borderWidth: 1 }] },
+        data: {
+            labels,
+            datasets: [{
+                label: 'Q1-Q3',
+                data: boxData,
+                backgroundColor: 'rgba(76, 201, 240, 0.5)',
+                borderColor: '#4CC9F0',
+                borderWidth: 2,
+                barPercentage: 0.6
+            }]
+        },
         options: {
             responsive: true,
-            plugins: { legend: { display: false }, tooltip: { callbacks: { label: () => [`Min: ${formatCurrency(min)}`, `Mediana: ${formatCurrency(median)}`, `Max: ${formatCurrency(max)}`] } } },
-            scales: { y: { beginAtZero: true, ticks: { callback: (v) => formatCurrency(v) } }, x: { grid: { display: false } } }
-        }
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => {
+                            const stats = statsData[ctx.dataIndex];
+                            return [
+                                `Mín: ${formatCurrency(stats.min)}`,
+                                `Q1: ${formatCurrency(stats.q1)}`,
+                                `Mediana: ${formatCurrency(stats.median)}`,
+                                `Q3: ${formatCurrency(stats.q3)}`,
+                                `Máx: ${formatCurrency(stats.max)}`,
+                                `Std: ${formatCurrency(stats.std)}`
+                            ];
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { color: 'rgba(255,255,255,0.08)' },
+                    ticks: { color: '#9CA3AF', callback: (v) => formatCurrency(v) }
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: { color: '#E5E7EB' }
+                }
+            }
+        },
+        plugins: [{
+            id: 'medianLine',
+            afterDraw: (chart) => {
+                const ctx = chart.ctx;
+                const xAxis = chart.scales.x;
+                const yAxis = chart.scales.y;
+                
+                ctx.save();
+                ctx.strokeStyle = '#FFFFFF';
+                ctx.lineWidth = 3;
+                
+                medianLineData.forEach((median, i) => {
+                    const x = xAxis.getPixelForValue(i);
+                    const y = yAxis.getPixelForValue(median);
+                    if (!isNaN(y)) {
+                        const barWidth = chart.data.datasets[0].barPercentage * xAxis.width / 4;
+                        const xStart = x - barWidth / 2;
+                        const xEnd = x + barWidth / 2;
+                        
+                        ctx.beginPath();
+                        ctx.moveTo(xStart, y);
+                        ctx.lineTo(xEnd, y);
+                        ctx.stroke();
+                    }
+                });
+                ctx.restore();
+            }
+        }]
     });
 };
 
