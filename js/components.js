@@ -5,6 +5,7 @@
 let gastosChart = null;
 let comparacionChart = null;
 let boxplotChart = null;
+let gastosHorarioChart = null;
 
 const getMonthWeekRanges = (year, month) => {
     const ranges = [];
@@ -419,6 +420,85 @@ const initGastosDiaChart = () => {
                     ticks: { color: '#9CA3AF', callback: (v) => formatCurrency(v) }
                 },
                 x: {
+                    grid: { display: false },
+                    ticks: { color: '#E5E7EB' }
+                }
+            }
+        }
+    });
+};
+
+const initGastosHorarioChart = () => {
+    const canvas = document.getElementById('gastos-horario-chart');
+    if (!canvas) return;
+
+    const getFranja = (fecha) => {
+        const hour = new Date(fecha).getHours();
+        if (hour >= 0 && hour < 4) return 0;
+        if (hour >= 4 && hour < 8) return 1;
+        if (hour >= 8 && hour < 12) return 2;
+        if (hour >= 12 && hour < 16) return 3;
+        if (hour >= 16 && hour < 20) return 4;
+        return 5;
+    };
+
+    const now = new Date();
+    const gastosPorFranjaCat = {
+        0: {}, 1: {}, 2: {}, 3: {}, 4: {}, 5: {}
+    };
+
+    store.getState().transactions.filter(t => {
+        const d = new Date(t.fecha.includes('T') ? t.fecha : t.fecha + 'T12:00:00');
+        return t.tipo === 'Gasto' && d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+    }).forEach(t => {
+        const d = new Date(t.fecha.includes('T') ? t.fecha : t.fecha + 'T12:00:00');
+        const fr = getFranja(d);
+        const cat = t.categoria?.nombre || 'Otros';
+        if (!gastosPorFranjaCat[fr][cat]) gastosPorFranjaCat[fr][cat] = 0;
+        gastosPorFranjaCat[fr][cat] += t.monto;
+    });
+
+    const allCategories = [...new Set(Object.values(gastosPorFranjaCat).flatMap(f => Object.keys(f)))];
+    const labels = ['00:00-04:00', '04:00-08:00', '08:00-12:00', '12:00-16:00', '16:00-20:00', '20:00-24:00'];
+    const colors = ['#EF4444', '#F97316', '#EAB308', '#22C55E', '#3B82F6', '#8B5CF6', '#EC4899', '#14B8A6', '#06B6D4', '#F43F5E'];
+
+    const datasets = allCategories.map((cat, i) => ({
+        label: cat,
+        data: [0, 1, 2, 3, 4, 5].map(f => gastosPorFranjaCat[f][cat] || 0),
+        backgroundColor: colors[i % colors.length],
+        borderWidth: 0,
+        borderRadius: i === allCategories.length - 1 ? { topLeft: 8, topRight: 8, bottomLeft: 0, bottomRight: 0 } : 0
+    }));
+
+    if (gastosHorarioChart) gastosHorarioChart.destroy();
+
+    gastosHorarioChart = new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels,
+            datasets
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom', labels: { color: '#9CA3AF', padding: 12, usePointStyle: true } },
+                tooltip: {
+                    backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                    callbacks: {
+                        label: (ctx) => `${ctx.dataset.label}: ${formatCurrency(ctx.raw)}`
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    stacked: true,
+                    grid: { color: 'rgba(255,255,255,0.08)' },
+                    ticks: { color: '#9CA3AF', callback: (v) => formatCurrency(v) }
+                },
+                x: {
+                    stacked: true,
                     grid: { display: false },
                     ticks: { color: '#E5E7EB' }
                 }

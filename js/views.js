@@ -67,6 +67,12 @@ const renderHomeView = () => {
                 </div>
             </div>
             <div class="card chart-card">
+                <div class="chart-card__title">Gastos por Horario</div>
+                <div class="chart-container chart-container--bar" style="height: 280px;">
+                    <canvas id="gastos-horario-chart"></canvas>
+                </div>
+            </div>
+            <div class="card chart-card">
                 <div class="chart-card__title">Movimientos por Semana</div>
                 <div class="chart-container chart-container--bar">
                     <canvas id="comparacion-chart"></canvas>
@@ -543,6 +549,7 @@ const render = () => {
             const fabHome = document.querySelector('.fab');
             if (fabHome) fabHome.classList.remove('fab--hidden');
             setTimeout(() => { initGastosChart(); }, 100);
+            setTimeout(() => { initGastosHorarioChart(); }, 150);
             setTimeout(() => { initGastosDiaChart(); }, 200);
             setTimeout(() => { initBoxplotChart(); }, 250);
             setTimeout(() => { renderCalendarHeatmap(); }, 300);
