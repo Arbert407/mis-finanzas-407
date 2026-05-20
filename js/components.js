@@ -590,6 +590,8 @@ window.openSettings = () => {
             <hr style="border: none; border-top: 1px solid var(--border); width: 100%;">
             <button class="btn btn--secondary" style="width: 100%;" onclick="exportData()">Exportar JSON</button>
             <button class="btn btn--secondary" style="width: 100%;" onclick="importData()">Importar JSON</button>
+            <hr style="border: none; border-top: 1px solid var(--border); width: 100%;">
+            <button class="btn btn--secondary" style="width: 100%;" onclick="loadDummyData()">Descargar Datos Dummy</button>
             ${lastSync ? `<div style="font-size: 11px; color: var(--text-secondary); text-align: center;">Última sincronización: ${new Date(lastSync).toLocaleString()}</div>` : ''}
         </div>`;
     cancelBtn.textContent = 'Cerrar';
@@ -665,6 +667,27 @@ window.exportData = () => {
     a.download = `mis-finanzas-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
+};
+
+window.loadDummyData = async () => {
+    closeModal();
+    showToast('Descargando datos dummy...', 'info');
+    try {
+        const response = await fetch('js/seed-may2026.json');
+        const data = await response.json();
+        
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'seed-may2026.json';
+        a.click();
+        URL.revokeObjectURL(url);
+        
+        showToast('Datos dummy descargados', 'success');
+    } catch (err) {
+        showToast('Error al descargar datos dummy', 'error');
+    }
 };
 
 window.importData = () => {
