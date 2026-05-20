@@ -155,15 +155,13 @@ const initBoxplotChart = () => {
         };
     };
 
-    const boxData = [];
-    const medianLineData = [];
     const statsData = [];
+    const rangeData = [];
     
     for (let w = 1; w <= 4; w++) {
         const stats = calculateStats(semanas[w]);
         statsData.push(stats);
-        boxData.push([stats.q1, stats.q3]);
-        medianLineData.push(stats.median);
+        rangeData.push([stats.min, stats.max]);
     }
 
     boxplotChart = new Chart(canvas, {
@@ -171,12 +169,12 @@ const initBoxplotChart = () => {
         data: {
             labels,
             datasets: [{
-                label: 'Q1-Q3',
-                data: boxData,
-                backgroundColor: 'rgba(76, 201, 240, 0.5)',
+                label: 'Rango',
+                data: rangeData,
+                backgroundColor: 'rgba(76, 201, 240, 0.15)',
                 borderColor: '#4CC9F0',
-                borderWidth: 2,
-                barPercentage: 0.6
+                borderWidth: 0,
+                barPercentage: 0.4
             }]
         },
         options: {
@@ -212,30 +210,68 @@ const initBoxplotChart = () => {
             }
         },
         plugins: [{
-            id: 'medianLine',
+            id: 'boxplotElements',
             afterDraw: (chart) => {
                 const ctx = chart.ctx;
                 const xAxis = chart.scales.x;
                 const yAxis = chart.scales.y;
+                const dataset = chart.data.datasets[0];
                 
                 ctx.save();
-                ctx.strokeStyle = '#FFFFFF';
-                ctx.lineWidth = 3;
                 
-                medianLineData.forEach((median, i) => {
+                statsData.forEach((stats, i) => {
                     const x = xAxis.getPixelForValue(i);
-                    const y = yAxis.getPixelForValue(median);
-                    if (!isNaN(y)) {
-                        const barWidth = chart.data.datasets[0].barPercentage * xAxis.width / 4;
-                        const xStart = x - barWidth / 2;
-                        const xEnd = x + barWidth / 2;
-                        
-                        ctx.beginPath();
-                        ctx.moveTo(xStart, y);
-                        ctx.lineTo(xEnd, y);
-                        ctx.stroke();
-                    }
+                    const barWidth = dataset.barPercentage * xAxis.width / 4;
+                    const xStart = x - barWidth / 2;
+                    const xEnd = x + barWidth / 2;
+                    
+                    const minY = yAxis.getPixelForValue(stats.min);
+                    const maxY = yAxis.getPixelForValue(stats.max);
+                    const q1Y = yAxis.getPixelForValue(stats.q1);
+                    const q3Y = yAxis.getPixelForValue(stats.q3);
+                    const medianY = yAxis.getPixelForValue(stats.median);
+                    
+                    if (isNaN(minY) || isNaN(maxY)) return;
+                    
+                    ctx.fillStyle = 'rgba(76, 201, 240, 0.6)';
+                    ctx.fillRect(xStart, q3Y, xEnd - xStart, q1Y - q3Y);
+                    
+                    ctx.strokeStyle = '#4CC9F0';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(xStart, q3Y, xEnd - xStart, q1Y - q3Y);
+                    
+                    ctx.strokeStyle = '#4CC9F0';
+                    ctx.lineWidth = 2;
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(x, minY);
+                    ctx.lineTo(x, q1Y);
+                    ctx.stroke();
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(x, q3Y);
+                    ctx.lineTo(x, maxY);
+                    ctx.stroke();
+                    
+                    const whiskerWidth = barWidth * 0.3;
+                    ctx.beginPath();
+                    ctx.moveTo(xStart + barWidth * 0.2, minY);
+                    ctx.lineTo(xEnd - barWidth * 0.2, minY);
+                    ctx.stroke();
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(xStart + barWidth * 0.2, maxY);
+                    ctx.lineTo(xEnd - barWidth * 0.2, maxY);
+                    ctx.stroke();
+                    
+                    ctx.strokeStyle = '#FFFFFF';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.moveTo(xStart + barWidth * 0.15, medianY);
+                    ctx.lineTo(xEnd - barWidth * 0.15, medianY);
+                    ctx.stroke();
                 });
+                
                 ctx.restore();
             }
         }]
