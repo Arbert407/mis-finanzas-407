@@ -159,8 +159,8 @@ const initGastosChart = () => {
         data: {
             labels,
             datasets: [
-                { label: 'Ingresos', data: weekRanges.map(w => ingresosPorSemana[w.week]), backgroundColor: 'rgba(34, 197, 94, 0.85)', borderColor: '#22C55E', borderWidth: 2, borderRadius: 8 },
-                { label: 'Gastos', data: weekRanges.map(w => gastosPorSemana[w.week]), backgroundColor: 'rgba(239, 68, 68, 0.85)', borderColor: '#EF4444', borderWidth: 2, borderRadius: 8 }
+                { label: 'Ingresos', data: weekRanges.map(w => ingresosPorSemana[w.week]), backgroundColor: 'rgba(168, 85, 247, 0.85)', borderColor: '#A855F7', borderWidth: 2, borderRadius: 8 },
+                { label: 'Gastos', data: weekRanges.map(w => gastosPorSemana[w.week]), backgroundColor: 'rgba(249, 115, 22, 0.85)', borderColor: '#F97316', borderWidth: 2, borderRadius: 8 }
             ]
         },
 options: {
