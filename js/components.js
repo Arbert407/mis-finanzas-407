@@ -6,6 +6,42 @@ let gastosChart = null;
 let comparacionChart = null;
 let boxplotChart = null;
 
+const getMonthWeekRanges = (year, month) => {
+    const ranges = [];
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const monthName = new Date(year, month, 1).toLocaleString('es-ES', { month: 'short' });
+    const monthCap = monthName.charAt(0).toUpperCase() + monthName.slice(1);
+    
+    let currentDate = 1;
+    let weekNum = 1;
+    
+    while (currentDate <= daysInMonth) {
+        const date = new Date(year, month, currentDate);
+        const dayOfWeek = date.getDay();
+        
+        let weekEnd;
+        if (weekNum === 1 && dayOfWeek !== 1) {
+            const daysUntilMonday = dayOfWeek === 0 ? 1 : 8 - dayOfWeek;
+            weekEnd = Math.min(currentDate + daysUntilMonday - 1, daysInMonth);
+        } else {
+            weekEnd = Math.min(currentDate + 6, daysInMonth);
+        }
+        
+        ranges.push({
+            week: weekNum,
+            start: currentDate,
+            end: weekEnd,
+            label: currentDate + '-' + weekEnd + ' ' + monthCap
+        });
+        
+        currentDate = weekEnd + 1;
+        weekNum++;
+        if (weekNum > 5) break;
+    }
+    
+    return ranges;
+};
+
 // Charts
 const initGastosChart = () => {
     const canvas = document.getElementById('gastos-chart');
@@ -61,23 +97,60 @@ const initGastosChart = () => {
     if (!canvasComparacion) return;
     if (comparacionChart) comparacionChart.destroy();
 
-    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-    const firstDay = new Date(currentYear, currentMonth, 1).getDay();
-    const firstSunday = firstDay === 0 ? 1 : 7 - firstDay + 1;
     const monthName = new Date(currentYear, currentMonth, 1).toLocaleDateString('es-ES', { month: 'short' });
     const monthCap = monthName.charAt(0).toUpperCase() + monthName.slice(1);
 
-    const labels = [`1-${firstSunday} ${monthCap}`, `${firstSunday + 1}-${Math.min(firstSunday + 7, daysInMonth)} ${monthCap}`, `${Math.min(firstSunday + 8, daysInMonth)}-${Math.min(firstSunday + 14, daysInMonth)} ${monthCap}`, `${Math.min(firstSunday + 15, daysInMonth)}-${daysInMonth} ${monthCap}`];
+    const getWeekRanges = () => {
+        const ranges = [];
+        const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+        
+        let currentDate = 1;
+        let weekNum = 1;
+        
+        while (currentDate <= daysInMonth) {
+            const date = new Date(currentYear, currentMonth, currentDate);
+            const dayOfWeek = date.getDay();
+            
+            let weekEnd;
+            if (weekNum === 1 && dayOfWeek !== 1) {
+                const daysUntilMonday = dayOfWeek === 0 ? 1 : 8 - dayOfWeek;
+                weekEnd = Math.min(currentDate + daysUntilMonday - 1, daysInMonth);
+            } else {
+                weekEnd = Math.min(currentDate + 6, daysInMonth);
+            }
+            
+            ranges.push({
+                week: weekNum,
+                start: currentDate,
+                end: weekEnd,
+                label: currentDate + '-' + weekEnd + ' ' + monthCap
+            });
+            
+            currentDate = weekEnd + 1;
+            weekNum++;
+            if (weekNum > 5) break;
+        }
+        
+        return ranges;
+    };
 
-    const gastosPorSemana = { 1: 0, 2: 0, 3: 0, 4: 0 };
-    const ingresosPorSemana = { 1: 0, 2: 0, 3: 0, 4: 0 };
+    const weekRanges = getWeekRanges();
+    const labels = weekRanges.map(w => w.label);
+    const gastosPorSemana = {};
+    const ingresosPorSemana = {};
+    weekRanges.forEach(w => {
+        gastosPorSemana[w.week] = 0;
+        ingresosPorSemana[w.week] = 0;
+    });
 
     transactions.forEach(t => {
         const date = new Date(t.fecha.includes('T') ? t.fecha : t.fecha + 'T12:00:00');
         const day = date.getDate();
-        let week = day <= firstSunday ? 1 : Math.min(4, Math.floor((day - firstSunday - 1) / 7) + 2);
-        if (t.tipo === 'Gasto') gastosPorSemana[week] = (gastosPorSemana[week] || 0) + t.monto;
-        else ingresosPorSemana[week] = (ingresosPorSemana[week] || 0) + t.monto;
+        const week = weekRanges.find(w => day >= w.start && day <= w.end);
+        if (week) {
+            if (t.tipo === 'Gasto') gastosPorSemana[week.week] += t.monto;
+            else ingresosPorSemana[week.week] += t.monto;
+        }
     });
 
     comparacionChart = new Chart(canvasComparacion, {
@@ -85,8 +158,8 @@ const initGastosChart = () => {
         data: {
             labels,
             datasets: [
-                { label: 'Ingresos', data: [ingresosPorSemana[1], ingresosPorSemana[2], ingresosPorSemana[3], ingresosPorSemana[4]], backgroundColor: 'rgba(34, 197, 94, 0.85)', borderColor: '#22C55E', borderWidth: 2, borderRadius: 8 },
-                { label: 'Gastos', data: [gastosPorSemana[1], gastosPorSemana[2], gastosPorSemana[3], gastosPorSemana[4]], backgroundColor: 'rgba(239, 68, 68, 0.85)', borderColor: '#EF4444', borderWidth: 2, borderRadius: 8 }
+                { label: 'Ingresos', data: weekRanges.map(w => ingresosPorSemana[w.week]), backgroundColor: 'rgba(34, 197, 94, 0.85)', borderColor: '#22C55E', borderWidth: 2, borderRadius: 8 },
+                { label: 'Gastos', data: weekRanges.map(w => gastosPorSemana[w.week]), backgroundColor: 'rgba(239, 68, 68, 0.85)', borderColor: '#EF4444', borderWidth: 2, borderRadius: 8 }
             ]
         },
         options: {
@@ -108,46 +181,7 @@ const initBoxplotChart = () => {
     const now = new Date();
     const currentYear = now.getFullYear();
     const currentMonth = now.getMonth();
-    const monthName = new Date(currentYear, currentMonth, 1).toLocaleDateString('es-ES', { month: 'short' });
-    const monthCap = monthName.charAt(0).toUpperCase() + monthName.slice(1);
-
-    const getWeekRanges = () => {
-        const ranges = [];
-        const firstDay = new Date(currentYear, currentMonth, 1);
-        const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-        
-        let currentDate = 1;
-        let weekNum = 1;
-        
-        while (currentDate <= daysInMonth) {
-            const date = new Date(currentYear, currentMonth, currentDate);
-            const dayOfWeek = date.getDay();
-            
-            let weekEnd;
-            if (weekNum === 1 && dayOfWeek !== 0) {
-                const daysUntilSunday = 7 - dayOfWeek;
-                weekEnd = Math.min(currentDate + daysUntilSunday - 1, daysInMonth);
-            } else {
-                weekEnd = Math.min(currentDate + 6, daysInMonth);
-            }
-            
-            ranges.push({
-                week: weekNum,
-                start: currentDate,
-                end: weekEnd,
-                label: `${currentDate}-${weekEnd} ${monthCap}`
-            });
-            
-            currentDate = weekEnd + 1;
-            weekNum++;
-            
-            if (weekNum > 5) break;
-        }
-        
-        return ranges;
-    };
-
-    const weekRanges = getWeekRanges();
+    const weekRanges = getMonthWeekRanges(currentYear, currentMonth);
     const labels = weekRanges.map(w => w.label);
     const semanas = {};
     weekRanges.forEach(w => { semanas[w.week] = []; });
