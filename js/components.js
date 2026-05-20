@@ -283,7 +283,7 @@ const initBoxplotChart = () => {
         },
         plugins: [{
             id: 'boxplotElements',
-            afterDraw: (chart) => {
+            beforeDatasetsDraw: (chart) => {
                 const ctx = chart.ctx;
                 const xAxis = chart.scales.x;
                 const yAxis = chart.scales.y;
