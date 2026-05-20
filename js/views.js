@@ -3,10 +3,19 @@
  */
 const renderHomeView = () => {
     const transactions = store.getState().transactions;
-    const totalIngresos = transactions
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+    
+    const monthlyTransactions = transactions.filter(t => {
+        const d = new Date(t.fecha.includes('T') ? t.fecha : t.fecha + 'T00:00');
+        return d.getFullYear() === currentYear && d.getMonth() === currentMonth;
+    });
+    
+    const totalIngresos = monthlyTransactions
         .filter(t => t.tipo === 'Ingreso')
         .reduce((sum, t) => sum + t.monto, 0);
-    const totalGastos = transactions
+    const totalGastos = monthlyTransactions
         .filter(t => t.tipo === 'Gasto')
         .reduce((sum, t) => sum + t.monto, 0);
     const balance = totalIngresos - totalGastos;
@@ -22,22 +31,30 @@ const renderHomeView = () => {
         <h1 class="page-title">Dashboard</h1>
         <div class="dashboard-grid">
             <div class="card balance-card">
+                <div class="balance-card__icon ${balance >= 0 ? 'balance-card__icon--positive' : 'balance-card__icon--negative'}">
+                    ${balance >= 0 ? '↑' : '↓'}
+                </div>
                 <div class="balance-card__label">Balance Total</div>
                 <div class="balance-card__amount ${balance >= 0 ? 'balance-card__amount--positive' : 'balance-card__amount--negative'}">
                     ${formatCurrency(balance)}
                 </div>
+                <div class="balance-card__subtitle">del mes en curso</div>
             </div>
             <div class="card balance-card">
+                <div class="balance-card__icon balance-card__icon--positive">+</div>
                 <div class="balance-card__label">Ingresos</div>
                 <div class="balance-card__amount balance-card__amount--positive">
                     ${formatCurrency(totalIngresos)}
                 </div>
+                <div class="balance-card__subtitle">del mes en curso</div>
             </div>
             <div class="card balance-card">
+                <div class="balance-card__icon balance-card__icon--negative">−</div>
                 <div class="balance-card__label">Gastos</div>
                 <div class="balance-card__amount balance-card__amount--negative">
                     ${formatCurrency(totalGastos)}
                 </div>
+                <div class="balance-card__subtitle">del mes en curso</div>
             </div>
         </div>
 
