@@ -1026,17 +1026,19 @@ input[type="text"]::placeholder {
     width: 100%;
     max-width: 300px;
     margin: 0 auto;
+    height: 300px;
 }
 
 .chart-container--bar {
     max-width: 100%;
-    min-height: 200px;
+    min-height: 250px;
+    height: 250px;
 }
 
 .chart-container--wide {
     max-width: 100%;
-    min-height: 300px;
-    height: 300px;
+    min-height: 350px;
+    height: 350px;
 }
 
 .chart-card {

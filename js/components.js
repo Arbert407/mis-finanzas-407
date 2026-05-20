@@ -77,6 +77,7 @@ const initGastosChart = () => {
         },
         options: {
             responsive: true,
+            maintainAspectRatio: false,
             plugins: {
                 legend: { position: 'bottom', labels: { color: '#9CA3AF', padding: 16, usePointStyle: true } },
                 tooltip: {
@@ -162,9 +163,10 @@ const initGastosChart = () => {
                 { label: 'Gastos', data: weekRanges.map(w => gastosPorSemana[w.week]), backgroundColor: 'rgba(239, 68, 68, 0.85)', borderColor: '#EF4444', borderWidth: 2, borderRadius: 8 }
             ]
         },
-        options: {
+options: {
             responsive: true,
-            plugins: { legend: { position: 'bottom', labels: { color: '#9CA3AF' } } },
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'bottom', labels: { color: '#9CA3AF' } }},
             scales: {
                 y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.08)' }, ticks: { color: '#9CA3AF', callback: (v) => formatCurrency(v) } },
                 x: { grid: { display: false }, ticks: { color: '#E5E7EB' } }
@@ -248,6 +250,7 @@ const initBoxplotChart = () => {
         },
         options: {
             responsive: true,
+            maintainAspectRatio: false,
             plugins: {
                 legend: { display: false },
                 tooltip: {
@@ -367,7 +370,7 @@ const initGastosDiaChart = () => {
     new Chart(canvas, {
         type: 'line',
         data: { labels: weekDays, datasets: [{ data: [gastosPorDia[1], gastosPorDia[2], gastosPorDia[3], gastosPorDia[4], gastosPorDia[5], gastosPorDia[6], gastosPorDia[0]], borderColor: '#EF4444', backgroundColor: 'rgba(239, 68, 68, 0.1)', borderWidth: 3, fill: true, tension: 0.4, pointBackgroundColor: '#EF4444', pointRadius: 6 }] },
-        options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { callback: (v) => formatCurrency(v) } }, x: { grid: { display: false } } } }
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { callback: (v) => formatCurrency(v) } }, x: { grid: { display: false } } } }
     });
 };
 
