@@ -108,23 +108,58 @@ const initBoxplotChart = () => {
     const now = new Date();
     const currentYear = now.getFullYear();
     const currentMonth = now.getMonth();
-    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-    const firstDay = new Date(currentYear, currentMonth, 1).getDay();
-    const firstSunday = firstDay === 0 ? 1 : 7 - firstDay + 1;
     const monthName = new Date(currentYear, currentMonth, 1).toLocaleDateString('es-ES', { month: 'short' });
     const monthCap = monthName.charAt(0).toUpperCase() + monthName.slice(1);
 
-    const labels = [`1-${firstSunday} ${monthCap}`, `${firstSunday + 1}-${Math.min(firstSunday + 7, daysInMonth)} ${monthCap}`, `${Math.min(firstSunday + 8, daysInMonth)}-${Math.min(firstSunday + 14, daysInMonth)} ${monthCap}`, `${Math.min(firstSunday + 15, daysInMonth)}-${daysInMonth} ${monthCap}`];
+    const getWeekRanges = () => {
+        const ranges = [];
+        const firstDay = new Date(currentYear, currentMonth, 1);
+        const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+        
+        let currentDate = 1;
+        let weekNum = 1;
+        
+        while (currentDate <= daysInMonth) {
+            const date = new Date(currentYear, currentMonth, currentDate);
+            const dayOfWeek = date.getDay();
+            
+            let weekEnd;
+            if (weekNum === 1 && dayOfWeek !== 0) {
+                const daysUntilSunday = 7 - dayOfWeek;
+                weekEnd = Math.min(currentDate + daysUntilSunday - 1, daysInMonth);
+            } else {
+                weekEnd = Math.min(currentDate + 6, daysInMonth);
+            }
+            
+            ranges.push({
+                week: weekNum,
+                start: currentDate,
+                end: weekEnd,
+                label: `${currentDate}-${weekEnd} ${monthCap}`
+            });
+            
+            currentDate = weekEnd + 1;
+            weekNum++;
+            
+            if (weekNum > 5) break;
+        }
+        
+        return ranges;
+    };
 
-    const semanas = { 1: [], 2: [], 3: [], 4: [] };
+    const weekRanges = getWeekRanges();
+    const labels = weekRanges.map(w => w.label);
+    const semanas = {};
+    weekRanges.forEach(w => { semanas[w.week] = []; });
+
     store.getState().transactions.filter(t => {
         const d = new Date(t.fecha.includes('T') ? t.fecha : t.fecha + 'T12:00:00');
         return t.tipo === 'Gasto' && d.getFullYear() === currentYear && d.getMonth() === currentMonth;
     }).forEach(t => {
         const d = new Date(t.fecha.includes('T') ? t.fecha : t.fecha + 'T12:00:00');
         const day = d.getDate();
-        const week = day <= firstSunday ? 1 : Math.min(4, Math.floor((day - firstSunday - 1) / 7) + 2);
-        semanas[week].push(t.monto);
+        const week = weekRanges.find(w => day >= w.start && day <= w.end);
+        if (week) semanas[week.week].push(t.monto);
     });
 
     const calculateStats = (arr) => {
@@ -158,11 +193,11 @@ const initBoxplotChart = () => {
     const statsData = [];
     const rangeData = [];
     
-    for (let w = 1; w <= 4; w++) {
-        const stats = calculateStats(semanas[w]);
+    weekRanges.forEach(w => {
+        const stats = calculateStats(semanas[w.week]);
         statsData.push(stats);
         rangeData.push([stats.min, stats.max]);
-    }
+    });
 
     boxplotChart = new Chart(canvas, {
         type: 'bar',
@@ -216,12 +251,13 @@ const initBoxplotChart = () => {
                 const xAxis = chart.scales.x;
                 const yAxis = chart.scales.y;
                 const dataset = chart.data.datasets[0];
+                const numWeeks = weekRanges.length;
                 
                 ctx.save();
                 
                 statsData.forEach((stats, i) => {
                     const x = xAxis.getPixelForValue(i);
-                    const barWidth = dataset.barPercentage * xAxis.width / 4;
+                    const barWidth = dataset.barPercentage * xAxis.width / numWeeks;
                     const xStart = x - barWidth / 2;
                     const xEnd = x + barWidth / 2;
                     
