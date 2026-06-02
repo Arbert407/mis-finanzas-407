@@ -580,3 +580,13 @@ const render = () => {
             main.innerHTML = renderHomeView();
     }
 };
+
+window.addEventListener('charts:update', () => {
+    if (document.getElementById('gastos-chart')) {
+        setTimeout(() => { initGastosChart(); }, 50);
+        setTimeout(() => { initGastosHorarioChart(); }, 100);
+        setTimeout(() => { initGastosDiaChart(); }, 150);
+        setTimeout(() => { initBoxplotChart(); }, 200);
+        setTimeout(() => { renderCalendarHeatmap(); }, 250);
+    }
+});

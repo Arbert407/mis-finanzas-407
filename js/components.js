@@ -6,6 +6,7 @@ let gastosChart = null;
 let comparacionChart = null;
 let boxplotChart = null;
 let gastosHorarioChart = null;
+let gastosDiaChart = null;
 
 const getMonthWeekRanges = (year, month) => {
     const ranges = [];
@@ -49,16 +50,16 @@ const initGastosChart = () => {
     const canvasComparacion = document.getElementById('comparacion-chart');
     if (!canvas) return;
 
-    const now = new Date();
-    const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth();
+    const state = store.getState();
+    const selectedYear = state.selectedYear ?? new Date().getFullYear();
+    const selectedMonth = state.selectedMonth ?? new Date().getMonth();
 
-    const isCurrentMonth = (dateStr) => {
+    const isSelectedMonth = (dateStr) => {
         const date = new Date(dateStr);
-        return date.getFullYear() === currentYear && date.getMonth() === currentMonth;
+        return date.getFullYear() === selectedYear && date.getMonth() === selectedMonth;
     };
 
-    const transactions = store.getState().transactions.filter(t => isCurrentMonth(t.fecha));
+    const transactions = store.getState().transactions.filter(t => isSelectedMonth(t.fecha));
 
     if (gastosChart) gastosChart.destroy();
 
@@ -99,18 +100,18 @@ const initGastosChart = () => {
     if (!canvasComparacion) return;
     if (comparacionChart) comparacionChart.destroy();
 
-    const monthName = new Date(currentYear, currentMonth, 1).toLocaleDateString('es-ES', { month: 'short' });
+    const monthName = new Date(selectedYear, selectedMonth, 1).toLocaleDateString('es-ES', { month: 'short' });
     const monthCap = monthName.charAt(0).toUpperCase() + monthName.slice(1);
 
     const getWeekRanges = () => {
         const ranges = [];
-        const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+        const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
         
         let currentDate = 1;
         let weekNum = 1;
         
         while (currentDate <= daysInMonth) {
-            const date = new Date(currentYear, currentMonth, currentDate);
+            const date = new Date(selectedYear, selectedMonth, currentDate);
             const dayOfWeek = date.getDay();
             
             let weekEnd;
@@ -181,17 +182,17 @@ const initBoxplotChart = () => {
     if (!canvas) return;
     if (boxplotChart) boxplotChart.destroy();
 
-    const now = new Date();
-    const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth();
-    const weekRanges = getMonthWeekRanges(currentYear, currentMonth);
+    const state = store.getState();
+    const selectedYear = state.selectedYear ?? new Date().getFullYear();
+    const selectedMonth = state.selectedMonth ?? new Date().getMonth();
+    const weekRanges = getMonthWeekRanges(selectedYear, selectedMonth);
     const labels = weekRanges.map(w => w.label);
     const semanas = {};
     weekRanges.forEach(w => { semanas[w.week] = []; });
 
     store.getState().transactions.filter(t => {
         const d = new Date(t.fecha.includes('T') ? t.fecha : t.fecha + 'T12:00:00');
-        return t.tipo === 'Gasto' && d.getFullYear() === currentYear && d.getMonth() === currentMonth;
+        return t.tipo === 'Gasto' && d.getFullYear() === selectedYear && d.getMonth() === selectedMonth;
     }).forEach(t => {
         const d = new Date(t.fecha.includes('T') ? t.fecha : t.fecha + 'T12:00:00');
         const day = d.getDate();
@@ -355,14 +356,18 @@ const initBoxplotChart = () => {
 const initGastosDiaChart = () => {
     const canvas = document.getElementById('gastos-dia-chart');
     if (!canvas) return;
+    if (gastosDiaChart) gastosDiaChart.destroy();
 
+    const state = store.getState();
+    const selectedYear = state.selectedYear ?? new Date().getFullYear();
+    const selectedMonth = state.selectedMonth ?? new Date().getMonth();
+    
     const weekDays = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
     const gastosPorDia = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
 
-    const now = new Date();
     store.getState().transactions.filter(t => {
         const d = new Date(t.fecha.includes('T') ? t.fecha : t.fecha + 'T12:00:00');
-        return t.tipo === 'Gasto' && d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+        return t.tipo === 'Gasto' && d.getFullYear() === selectedYear && d.getMonth() === selectedMonth;
     }).forEach(t => {
         const d = new Date(t.fecha.includes('T') ? t.fecha : t.fecha + 'T12:00:00');
         gastosPorDia[d.getDay()] = (gastosPorDia[d.getDay()] || 0) + t.monto;
@@ -370,7 +375,7 @@ const initGastosDiaChart = () => {
 
     const data = [gastosPorDia[1], gastosPorDia[2], gastosPorDia[3], gastosPorDia[4], gastosPorDia[5], gastosPorDia[6], gastosPorDia[0]];
 
-    new Chart(canvas, {
+    gastosDiaChart = new Chart(canvas, {
         type: 'line',
         data: {
             labels: weekDays,
@@ -431,7 +436,12 @@ const initGastosDiaChart = () => {
 const initGastosHorarioChart = () => {
     const canvas = document.getElementById('gastos-horario-chart');
     if (!canvas) return;
+    if (gastosHorarioChart) gastosHorarioChart.destroy();
 
+    const state = store.getState();
+    const selectedYear = state.selectedYear ?? new Date().getFullYear();
+    const selectedMonth = state.selectedMonth ?? new Date().getMonth();
+    
     const getFranja = (fecha) => {
         const hour = new Date(fecha).getHours();
         if (hour >= 0 && hour < 4) return 0;
@@ -442,14 +452,13 @@ const initGastosHorarioChart = () => {
         return 5;
     };
 
-    const now = new Date();
     const gastosPorFranjaCat = {
         0: {}, 1: {}, 2: {}, 3: {}, 4: {}, 5: {}
     };
 
     store.getState().transactions.filter(t => {
         const d = new Date(t.fecha.includes('T') ? t.fecha : t.fecha + 'T12:00:00');
-        return t.tipo === 'Gasto' && d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+        return t.tipo === 'Gasto' && d.getFullYear() === selectedYear && d.getMonth() === selectedMonth;
     }).forEach(t => {
         const d = new Date(t.fecha.includes('T') ? t.fecha : t.fecha + 'T12:00:00');
         const fr = getFranja(d);
@@ -512,22 +521,23 @@ const renderCalendarHeatmap = () => {
     const container = document.getElementById('calendar-heatmap-container');
     if (!container) return;
 
+    const state = store.getState();
+    const selectedYear = state.selectedYear ?? new Date().getFullYear();
+    const selectedMonth = state.selectedMonth ?? new Date().getMonth();
     const now = new Date();
-    const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth();
     const today = now.toDateString();
     const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
     const weekDaysShort = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
-    const firstDay = new Date(currentYear, currentMonth, 1).getDay();
-    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-    const daysInPrevMonth = new Date(currentYear, currentMonth, 0).getDate();
+    const firstDay = new Date(selectedYear, selectedMonth, 1).getDay();
+    const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
+    const daysInPrevMonth = new Date(selectedYear, selectedMonth, 0).getDate();
     const adjustedFirstDay = firstDay === 0 ? 6 : firstDay - 1;
 
     const gastosPorDia = {};
     store.getState().transactions.filter(t => {
         const d = new Date(t.fecha.includes('T') ? t.fecha : t.fecha + 'T12:00:00');
-        return t.tipo === 'Gasto' && d.getFullYear() === currentYear && d.getMonth() === currentMonth;
+        return t.tipo === 'Gasto' && d.getFullYear() === selectedYear && d.getMonth() === selectedMonth;
     }).forEach(t => {
         const d = new Date(t.fecha.includes('T') ? t.fecha : t.fecha + 'T12:00:00');
         gastosPorDia[d.getDate()] = (gastosPorDia[d.getDate()] || 0) + t.monto;
@@ -539,9 +549,9 @@ const renderCalendarHeatmap = () => {
     let daysHtml = '';
     for (let i = daysInPrevMonth - adjustedFirstDay + 1; i <= daysInPrevMonth; i++) daysHtml += `<div class="calendar-day calendar-day--other">${i}</div>`;
     for (let day = 1; day <= daysInMonth; day++) {
-        const dateStr = new Date(currentYear, currentMonth, day).toDateString();
+        const dateStr = new Date(selectedYear, selectedMonth, day).toDateString();
         const monto = gastosPorDia[day] || 0;
-        daysHtml += `<div class="calendar-day calendar-day--level-${getLevel(monto)} ${dateStr === today ? 'calendar-day--today' : ''}">${day}<div class="calendar-tooltip"><strong>${day} de ${monthNames[currentMonth]}</strong><br>${monto > 0 ? formatCurrency(monto) : 'Sin gastos'}</div></div>`;
+        daysHtml += `<div class="calendar-day calendar-day--level-${getLevel(monto)} ${dateStr === today ? 'calendar-day--today' : ''}">${day}<div class="calendar-tooltip"><strong>${day} de ${monthNames[selectedMonth]}</strong><br>${monto > 0 ? formatCurrency(monto) : 'Sin gastos'}</div></div>`;
     }
     for (let i = 1; i <= 42 - (adjustedFirstDay + daysInMonth); i++) daysHtml += `<div class="calendar-day calendar-day--other">${i}</div>`;
 
@@ -643,6 +653,36 @@ const DatePicker = (() => {
     };
 })();
 
+// Generar opciones de mes/año para dropdown
+const getMonthOptions = () => {
+    const state = store.getState();
+    const transactions = state.transactions || [];
+    
+    const monthsSet = new Set();
+    transactions.forEach(t => {
+        if (t.fecha) {
+            const d = new Date(t.fecha);
+            if (!isNaN(d.getTime())) {
+                monthsSet.add(`${d.getFullYear()}-${d.getMonth()}`);
+            }
+        }
+    });
+    
+    const months = Array.from(monthsSet).sort().reverse().slice(0, 24);
+    
+    const currentMonth = state.selectedMonth ?? new Date().getMonth();
+    const currentYear = state.selectedYear ?? new Date().getFullYear();
+    const currentSelected = `${currentYear}-${currentMonth}`;
+    
+    return months.map(m => {
+        const [year, month] = m.split('-');
+        const date = new Date(year, parseInt(month), 1);
+        const label = date.toLocaleString('es-ES', { month: 'long', year: 'numeric' });
+        const selected = m === currentSelected ? 'selected' : '';
+        return `<option value="${m}" ${selected}>${label.charAt(0).toUpperCase() + label.slice(1)}</option>`;
+    }).join('');
+};
+
 // Settings Modal
 window.openSettings = () => {
     const titleEl = document.getElementById('modal-title');
@@ -652,10 +692,21 @@ window.openSettings = () => {
     const importBtn = document.getElementById('modal-import');
     const currentUrl = SyncService.getUrl();
     const lastSync = SyncService.getLastSync();
+    const hasTransactions = store.getState().transactions.length > 0;
+    const monthOptions = getMonthOptions();
 
     titleEl.textContent = 'Ajustes';
     contentEl.innerHTML = `
         <div style="display: flex; flex-direction: column; gap: 12px;">
+            ${hasTransactions ? `
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+                <label style="font-size: 12px; color: var(--text-secondary);">Ver gráficos del mes</label>
+                <select id="selected-month" class="form-select" onchange="handleMonthChange(this.value)">
+                    ${monthOptions || '<option value="">Sin datos</option>'}
+                </select>
+            </div>
+            <hr style="border: none; border-top: 1px solid var(--border); width: 100%;">
+            ` : ''}
             <div style="display: flex; flex-direction: column; gap: 4px;">
                 <label style="font-size: 12px; color: var(--text-secondary);">URL de Apps Script</label>
                 <input type="text" id="appscript-url" class="input" placeholder="https://script.google.com/..." value="${currentUrl}">
@@ -679,6 +730,20 @@ window.openSettings = () => {
     confirmBtn.style.display = 'none';
     importBtn.style.display = '';
     document.getElementById('modal-overlay').classList.add('modal-overlay--active');
+};
+
+window.handleMonthChange = (value) => {
+    if (!value) return;
+    const [year, month] = value.split('-');
+    const state = store.getState();
+    store.setState({
+        ...state,
+        selectedMonth: parseInt(month),
+        selectedYear: parseInt(year)
+    });
+    closeModal();
+    const event = new CustomEvent('charts:update');
+    window.dispatchEvent(event);
 };
 
 window.saveAppscriptUrl = () => { SyncService.setUrl(document.getElementById('appscript-url').value.trim()); showToast('URL guardada correctamente', 'success'); };
