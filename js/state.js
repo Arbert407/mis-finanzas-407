@@ -1,5 +1,8 @@
 /**
- * Gestión de Estado
+ * Gestión de Estado - Store centralizado, Persistencia y Sincronización
+ *
+ * Este archivo maneja el estado global de la aplicación usando el patrón Pub/Sub.
+ * Incluye servicios de persistencia (localStorage) y sincronización (Google Sheets).
  */
 const createStore = (initialState) => {
     let state = initialState;
@@ -21,6 +24,7 @@ const createStore = (initialState) => {
     };
 };
 
+// Crea el store centralizado con patrón Pub/Sub. Métodos: getState(), setState(newState), subscribe(listener)
 const initialState = {
     transactions: [],
     categoriesGasto: [
@@ -128,11 +132,28 @@ const DataService = (() => {
             const { selectedMonth, selectedYear, ...dataWithoutMonth } = data;
             setStorage(dataWithoutMonth);
         }
-    };
+};
 })();
 
 /**
- * SyncService - Sincronización con Google Sheets
+ * SyncService - Sincronización con Google Sheets via Apps Script
+ *
+ * Servicio IIFE para sincronizar transacciones con Google Sheets.
+ * Usa URL de Apps Script configurada por el usuario en el modal de settings.
+ *
+ * Keys localStorage:
+ *   - lifestats-appscript-url => URL del Apps Script
+ *   - lifestats-sync-timestamp => último sync
+ *
+ * Métodos:
+ *   - getUrl() / setUrl(url) => gestión de URL
+ *   - getLastSync() => obtener timestamp
+ *   - testConnection() => probar conectividad
+ *   - syncToSheet(record) => sincronizar un registro
+ *   - syncIncremental(records) => sincronizar solo nuevos
+ *   - importFromSheet() => importar datos
+ *
+ * Llamado por: js/components.js (openSettings)
  */
 const SyncService = (() => {
     const APPSCRIPT_KEY = 'lifestats-appscript-url';

@@ -1,5 +1,28 @@
 /**
- * Vistas
+ * Vistas - Módulo de renderizado de UI
+ *
+ * Este archivo contiene todas las funciones que generan HTML para las diferentes vistas
+ * de la aplicación SPA: Home, Añadir Movimiento, Editar, Historial, y Configuración.
+ *
+ * Funciones llamadas desde este módulo:
+ *   - store.getState() => js/state.js, retorna el estado global
+ *   - navigate() => js/utils.js, función para cambiar de ruta/hash
+ *   - initGastosChart() => js/components.js, inicializa gráfico doughnut
+ *   - initGastosHorarioChart() => js/components.js, inicializa gráfico de barras por horario
+ *   - initGastosDiaChart() => js/components.js, inicializa gráfico lineal por día
+ *   - initBoxplotChart() => js/components.js, inicializa gráfico boxplot
+ *   - renderCalendarHeatmap() => js/components.js, renderiza mapa de calor mensual
+ *   - DatePicker.init() => js/components.js, inicializa selector de fecha
+ *   - generateId() => js/utils.js, genera ID único
+ *   - formatCurrency() => js/utils.js, formatea números a moneda
+ *   - showToast() => función local en views.js, muestra notificaciones toast
+ *   - closeModal() => función local en views.js, cierra modal
+ *
+ * Archivos involucrados:
+ *   - js/state.js (store y estado global)
+ *   - js/components.js (gráficos, calendar, modals)
+ *   - js/utils.js (utilidades helper)
+ *   - index.html (template base)
  */
 const renderHomeView = () => {
     const state = store.getState();
@@ -129,6 +152,10 @@ const renderHomeView = () => {
     `;
 };
 
+// Renderiza el formulario para crear un nuevo movimiento financiero.
+// Muestra selector de tipo (Gasto/Ingreso), campos de monto, fecha, categoría y descripción.
+// Utiliza DatePicker.init() para el selector de fecha.
+// Llama a: selectType() (cambia tipo), DatePicker.init() (componente fecha)
 const renderAddTransactionView = () => {
     const state = store.getState();
     const selectedType = state.selectedType || 'Gasto';
@@ -196,6 +223,9 @@ const renderAddTransactionView = () => {
     `;
 };
 
+// Renderiza el formulario de edición para un movimiento existente.
+// Recibe el ID desde state.editingId y carga los datos previos.
+// Al guardar llama a handleEditFormSubmit().
 const renderEditTransactionView = () => {
     const state = store.getState();
     const transaction = state.transactions.find(t => t.id === state.editingId);
@@ -272,6 +302,9 @@ const renderEditTransactionView = () => {
     `;
 };
 
+// Renderiza la vista de historial con lista completa de transacciones.
+// Permite filtrar por tipo (Gasto/Ingreso) y buscar.
+// Llama a: filterByType() (filtra tipo), confirmDeleteTransaction() (elimina)
 const renderHistoryView = () => {
     const transactions = store.getState().transactions;
     const sorted = [...transactions].sort((a, b) => {
@@ -539,7 +572,10 @@ const handleEditFormSubmit = (e, id) => {
     setTimeout(() => navigate('/'), 1500);
 };
 
-// Render principal
+// Render principal de la aplicación.
+// Determina qué vista mostrar según state.currentView.
+// Llama a las funciones render correspondientes (renderHomeView, renderAddTransactionView, etc.)
+// y también inicializa los componentes charts/calendar después de renderizar el DOM.
 const render = () => {
     const main = document.getElementById('main-content');
     const state = store.getState();
@@ -584,6 +620,11 @@ const render = () => {
     }
 };
 
+// Evento personalizado para actualizar todos los componentes visuales
+// cuando cambia el mes/año seleccionado en el dropdown del modal de settings.
+// Despachado desde components.js handleMonthChange().
+// Llama a: initGastosChart(), initGastosHorarioChart(), initGastosDiaChart(),
+//         initBoxplotChart(), renderCalendarHeatmap()
 window.addEventListener('charts:update', () => {
     if (document.getElementById('gastos-chart')) {
         setTimeout(() => { initGastosChart(); }, 50);

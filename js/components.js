@@ -1,13 +1,34 @@
 /**
- * Componentes UI: Charts, Calendar, DatePicker, Modal, Settings
+ * Componentes UI - Gráficos, Calendario, DatePicker, Modal y Configuración
+ * 
+ * Este archivo contiene componentes visuales que requieren inicialización después
+ * de que el DOM es renderizado: Chart.js charts, calendar heatmap, datepicker, modals.
+ * 
+ * Funciones llamadas:
+ *   - store.getState() => js/state.js, obtiene el estado global
+ *   - Chart => librería externa Chart.js para gráficos
+ *   - formatCurrency() => js/utils.js, formatea números a moneda
+ *   - showToast() => función globally definida para notificaciones
+ *   - closeModal() => js/views.js, cierra modal activo
+ *   - SyncService => js/state.js, sincronización con Google Sheets
+ * 
+ * Archivos involucrados:
+ *   - js/state.js (estado global, servicios de datos)
+ *   - js/views.js (closeModal, showToast)
+ *   - js/utils.js (formatCurrency, generateId)
  */
 
+// Referencias a instancias de Chart.js para poder destruirlas antes de recrear
 let gastosChart = null;
 let comparacionChart = null;
 let boxplotChart = null;
 let gastosHorarioChart = null;
 let gastosDiaChart = null;
 
+// Calcula rangos de semanas para un mes específico.
+// Útil para gráficos de boxplot y comparación semanal.
+// Parámetros: year (number), month (0-11)
+// Retorna: array de objetos { week, start, end, label }
 const getMonthWeekRanges = (year, month) => {
     const ranges = [];
     const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -44,7 +65,10 @@ const getMonthWeekRanges = (year, month) => {
     return ranges;
 };
 
-// Charts
+// Inicializa gráfico doughnut de Gastos por Categoría.
+// Lee selectedMonth/selectedYear del state para filtrar transacciones.
+// Usa Chart.js para renderizar. Destroy y recreate en cada llamada.
+// Llama a: store.getState(), formatCurrency()
 const initGastosChart = () => {
     const canvas = document.getElementById('gastos-chart');
     const canvasComparacion = document.getElementById('comparacion-chart');
@@ -177,6 +201,10 @@ options: {
     });
 };
 
+// Inicializa gráfico boxplot de distribución de gastos por semana.
+// Calcula estadísticas (min, q1, median, q3, max, avg) por semana.
+// Útil para ver variabilidad de gastos en el mes.
+// Llama a: store.getState(), getMonthWeekRanges()
 const initBoxplotChart = () => {
     const canvas = document.getElementById('boxplot-chart');
     if (!canvas) return;
@@ -353,6 +381,10 @@ const initBoxplotChart = () => {
     });
 };
 
+// Inicializa gráfico lineal de Gastos por Día de la semana.
+// Muestra promedio de gastos por cada día (Lunes-Domingo).
+// Útil para identificar días de mayor gasto.
+// Llama a: store.getState()
 const initGastosDiaChart = () => {
     const canvas = document.getElementById('gastos-dia-chart');
     if (!canvas) return;
@@ -433,6 +465,11 @@ const initGastosDiaChart = () => {
     });
 };
 
+// Inicializa gráfico de barras apiladas de Gastos por Horario.
+// Muestra distribución de gastos por franjas horarias (00-04, 04-08, etc.).
+// Cada barrera representa una categoría.
+// Útil para identificar horarios de mayor consumo.
+// Llama a: store.getState()
 const initGastosHorarioChart = () => {
     const canvas = document.getElementById('gastos-horario-chart');
     if (!canvas) return;
@@ -516,7 +553,11 @@ const initGastosHorarioChart = () => {
     });
 };
 
-// Calendar Heatmap
+// Calendar Heatmap - Renderiza mapa de calor de gastos por día del mes.
+// Muestra cada día del mes coloreado según monto gastado.
+// Niveles: 0 (sin datos), 1-5 (intensidad creciente).
+// Incluye tooltip con monto al hover.
+// Llama a: store.getState(), formatCurrency()
 const renderCalendarHeatmap = () => {
     const container = document.getElementById('calendar-heatmap-container');
     if (!container) return;
@@ -563,7 +604,10 @@ const renderCalendarHeatmap = () => {
     `;
 };
 
-// DatePicker
+// DatePicker - Componente selector de fecha y hora
+// Servicio IIFE que maneja la selección de fecha/hora en formularios.
+// Soporta navegación por meses, años, y selección de hora.
+// Métodos expose: init(input, dropdown), destroy()
 const DatePicker = (() => {
     let currentMonth = new Date().getMonth();
     let currentYear = new Date().getFullYear();
@@ -653,7 +697,11 @@ const DatePicker = (() => {
     };
 })();
 
-// Generar opciones de mes/año para dropdown
+// Genera opciones de mes/año para dropdown en modal de settings.
+// Lee transactions del state, extrae meses únicos, toma los últimos 24 meses.
+// Formato: "Marzo 2025", "Abril 2025", etc.
+// Retorna: string HTML con opciones <option>
+// Llama a: store.getState()
 const getMonthOptions = () => {
     const state = store.getState();
     const transactions = state.transactions || [];
@@ -683,7 +731,10 @@ const getMonthOptions = () => {
     }).join('');
 };
 
-// Settings Modal
+// Settings Modal - Abre modal de configuración/apoyo.
+// Muestra opciones de sincronización con Google Sheets, import/export JSON.
+// Incluye dropdown de selección de mes/año si hay transacciones.
+// Llama a: SyncService (state.js), getMonthOptions()
 window.openSettings = () => {
     const titleEl = document.getElementById('modal-title');
     const contentEl = document.getElementById('modal-content');
@@ -732,6 +783,10 @@ window.openSettings = () => {
     document.getElementById('modal-overlay').classList.add('modal-overlay--active');
 };
 
+// Maneja cambio de mes/año en dropdown del modal de settings.
+// Actualiza selectedMonth/selectedYear en state.
+// Cierra modal y dispara evento 'charts:update' para rerenderizar gráficos.
+// Llama a: store.setState(), closeModal()
 window.handleMonthChange = (value) => {
     if (!value) return;
     const [year, month] = value.split('-');

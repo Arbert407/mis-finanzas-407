@@ -1,6 +1,25 @@
 /**
- * Utilidades
+ * Utilidades - Helper functions, Router y formateo
+ * 
+ * Este archivo contiene funciones utility reutilizables incluyendo:
+ * - Generadores de IDs únicos (UUID)
+ * - Validadores de formularios
+ * - Formateo de fechas y monedas
+ * - Router SPA basado en hash (#/ruta)
+ * 
+ * Funciones llamadas:
+ *   - store.getState() => js/state.js, 获取 estado global
+ *   - render() => js/views.js, re-renderiza la vista
+ *   - navigate() => función local para cambiar hash
+ * 
+ * Archivos involucrados:
+ *   - js/state.js (estado global)
+ *   - js/views.js (render principal)
  */
+
+// Genera un UUID versión 4 aleatorio.
+// Formato: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+// Retorna: string con el ID generado
 const generateId = () => {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
         const r = Math.random() * 16 | 0;
@@ -9,6 +28,9 @@ const generateId = () => {
     });
 };
 
+// Valida que el monto sea un número mayor a cero.
+// Parámetro: value (string o número)
+// Retorna: { valid: boolean, error: string }
 const validateMonto = (value) => {
     const num = parseFloat(value);
     if (isNaN(num) || num <= 0) {
@@ -17,6 +39,9 @@ const validateMonto = (value) => {
     return { valid: true };
 };
 
+// Formatea una fecha al formato "dd MMM yyyy HH:mm" (español).
+// Parámetro: dateStr (string ISO)
+// Retorna: string formateada, ej: "15 mar 2024 14:30"
 const formatDate = (dateStr) => {
     const date = new Date(dateStr);
     const dateStr2 = date.toLocaleDateString('es-ES', {
@@ -32,6 +57,10 @@ const formatDate = (dateStr) => {
     return `${dateStr2} ${timeStr}`;
 };
 
+// Escapea caracteres HTML especiales para prevenir XSS.
+// Caracteres escapados: & < > " '
+// Parámetro: str (string)
+// Retorna: string segura para inserted en HTML
 const escapeHtml = (str) => {
     if (!str) return '';
     return str.replace(/&/g, '&amp;')
@@ -41,6 +70,10 @@ const escapeHtml = (str) => {
              .replace(/'/g, '&#039;');
 };
 
+// Formatea un número como moneda lempiras (HNL).
+// Usa Intl.NumberFormat con locale en-US y moneda HNL.
+// Parámetro: amount (number)
+// Retorna: string formateada, ej: "L 1,234.56"
 const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-US', {
         style: 'currency',
@@ -51,7 +84,15 @@ const formatCurrency = (amount) => {
 };
 
 /**
- * Router
+ * Router SPA basado en hash (#/ruta)
+ *
+ * Rutas disponibles:
+ *   - #/ => home
+ *   - #/agregar => add-transaction
+ *   - #/historial => history
+ *   - #/editar/:id => edit-transaction
+ *
+ * Mapping de rutas a nombres de vistas.
  */
 const routes = {
     '/': 'home',
@@ -59,21 +100,35 @@ const routes = {
     '/historial': 'history'
 };
 
+// Extrae el ID de edición desde la URL (#/editar/:id).
+// Retorna: string con el ID o null si no hay edición
 const getEditId = () => {
     const hash = window.location.hash;
     const match = hash.match(/^#\/editar\/(.+)$/);
     return match ? match[1] : null;
 };
 
+// Obtiene la ruta actual desde el hash (sin #).
+// Ejemplos: "/" => "/", "/agregar" => "/agregar"
+// Retorna: string con la ruta
 const getCurrentRoute = () => {
     const hash = window.location.hash.slice(1) || '/';
     return hash;
 };
 
+// Navega a una nueva ruta actualizando el hash.
+// Parámetro: path (string), ej: "/agregar"
+// Efecto: cambia window.location.hash
 const navigate = (path) => {
     window.location.hash = path;
 };
 
+// Maneja el cambio de ruta:
+// 1. Obtiene ruta actual y ID de edición
+// 2. Determina nombre de vista
+// 3. Actualiza state con currentView y editingId
+// 4. Llama a render() para actualizar UI
+// Llama a: store.setState(), render() desde views.js
 const handleRoute = () => {
     const path = getCurrentRoute();
     const editId = getEditId();
@@ -94,6 +149,9 @@ const handleRoute = () => {
     render();
 };
 
+// Renderiza el menú de navegación.
+// Lee currentView del state para aplicar clase active.
+// Llama a: store.getState()
 const renderNav = () => {
     const nav = document.getElementById('nav');
     const currentView = store.getState().currentView;
