@@ -43,8 +43,38 @@ Toda función debe incluir documentación con:
 - Propósito de la función
 - Descripción de parámetros
 - Descripción del valor de retorno (si aplica)
+- Funciones que llama este módulo
+- Archivos involucrados
 
-Ejemplo de documentación:
+### Reglas de Comentarios
+
+**Para cada módulo (.js):**
+```js
+/**
+ * Nombre del Módulo - Breve descripción
+ *
+ * Descripción detallada del propósito del módulo.
+ * Incluye información de estado global, servicios, o funciones clave.
+ *
+ * Funciones llamadas desde este módulo:
+ *   - función1() => js/archivo, descripción breve
+ *   - función2() => js/archivo, descripción breve
+ *
+ * Archivos involucrados:
+ *   - js/estado.js (descripción)
+ *   - js/componentes.js (descripción)
+ */
+```
+
+**Para cada función:**
+```js
+// Descripción breve de qué hace la función.
+// Más contexto si es necesario.
+// Llama a: funciónX(), funciónY()
+const miFuncion = () => {};
+```
+
+### Ejemplo de documentación
 
 ```js
 /**
@@ -54,6 +84,18 @@ Ejemplo de documentación:
  */
 const calculateTotal = (prices) => prices.reduce((sum, p) => sum + p, 0);
 ```
+
+### Módulos del Proyecto
+
+Los módulos existentes siguen esta estructura:
+
+| Archivo | Propósito |
+|---------|----------|
+| `js/app.js` | Entry point, router, service worker |
+| `js/state.js` | Store, persistencia, sincronización |
+| `js/views.js` | Renderizado de vistas |
+| `js/components.js` | Charts, modals, datepicker |
+| `js/utils.js` | Helpers, formateo, logging |
 
 ## Tamaño de Funciones
 
