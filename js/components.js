@@ -744,6 +744,7 @@ window.handleMonthChange = (value) => {
     closeModal();
     const event = new CustomEvent('charts:update');
     window.dispatchEvent(event);
+    render();
 };
 
 window.saveAppscriptUrl = () => { SyncService.setUrl(document.getElementById('appscript-url').value.trim()); showToast('URL guardada correctamente', 'success'); };

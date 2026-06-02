@@ -120,13 +120,14 @@ const DataService = (() => {
                 if (!parsed.selectedType) parsed.selectedType = 'Gasto';
                 if (!parsed.historyFilter) parsed.historyFilter = 'all';
                 if (!parsed.appScriptUrl) parsed.appScriptUrl = '';
-                if (!parsed.selectedMonth) parsed.selectedMonth = new Date().getMonth();
-                if (!parsed.selectedYear) parsed.selectedYear = new Date().getFullYear();
                 return parsed;
             }
             return null;
         },
-        save: (data) => setStorage(data)
+        save: (data) => {
+            const { selectedMonth, selectedYear, ...dataWithoutMonth } = data;
+            setStorage(dataWithoutMonth);
+        }
     };
 })();
 

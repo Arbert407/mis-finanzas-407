@@ -2,14 +2,14 @@
  * Vistas
  */
 const renderHomeView = () => {
+    const state = store.getState();
     const transactions = store.getState().transactions;
-    const now = new Date();
-    const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth();
+    const selectedYear = state.selectedYear ?? new Date().getFullYear();
+    const selectedMonth = state.selectedMonth ?? new Date().getMonth();
     
     const monthlyTransactions = transactions.filter(t => {
         const d = new Date(t.fecha.includes('T') ? t.fecha : t.fecha + 'T00:00');
-        return d.getFullYear() === currentYear && d.getMonth() === currentMonth;
+        return d.getFullYear() === selectedYear && d.getMonth() === selectedMonth;
     });
     
     const totalIngresos = monthlyTransactions
@@ -19,6 +19,9 @@ const renderHomeView = () => {
         .filter(t => t.tipo === 'Gasto')
         .reduce((sum, t) => sum + t.monto, 0);
     const balance = totalIngresos - totalGastos;
+
+    const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    const monthLabel = `${monthNames[selectedMonth]} ${selectedYear}`;
 
     const sortedAll = [...transactions].sort((a, b) => {
         const dateA = new Date(a.fecha.includes('T') ? a.fecha : a.fecha + 'T00:00');
@@ -38,7 +41,7 @@ const renderHomeView = () => {
                 <div class="balance-card__amount ${balance >= 0 ? 'balance-card__amount--positive' : 'balance-card__amount--negative'}">
                     ${formatCurrency(balance)}
                 </div>
-                <div class="balance-card__subtitle">del mes en curso</div>
+                <div class="balance-card__subtitle">de ${monthLabel}</div>
             </div>
             <div class="card balance-card">
                 <div class="balance-card__icon balance-card__icon--positive">+</div>
@@ -46,7 +49,7 @@ const renderHomeView = () => {
                 <div class="balance-card__amount balance-card__amount--positive">
                     ${formatCurrency(totalIngresos)}
                 </div>
-                <div class="balance-card__subtitle">del mes en curso</div>
+                <div class="balance-card__subtitle">de ${monthLabel}</div>
             </div>
             <div class="card balance-card">
                 <div class="balance-card__icon balance-card__icon--negative">−</div>
@@ -54,7 +57,7 @@ const renderHomeView = () => {
                 <div class="balance-card__amount balance-card__amount--negative">
                     ${formatCurrency(totalGastos)}
                 </div>
-                <div class="balance-card__subtitle">del mes en curso</div>
+                <div class="balance-card__subtitle">de ${monthLabel}</div>
             </div>
         </div>
 
