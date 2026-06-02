@@ -1054,6 +1054,31 @@ input[type="text"]::placeholder {
     color: var(--text-primary);
 }
 
+.analisis-card {
+    padding: 24px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    backdrop-filter: blur(20px);
+}
+
+.analisis-card__title {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    color: var(--text-primary);
+}
+
+.analisis-card__text {
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--text-secondary);
+}
+
+.analisis-card__text strong {
+    color: var(--primary);
+}
+
 .chart-legend {
     display: flex;
     flex-wrap: wrap;

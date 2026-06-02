@@ -125,6 +125,8 @@ const renderHomeView = () => {
             </div>
         </div>
 
+        ${generarAnalisisCompleto(monthlyTransactions, selectedMonth, selectedYear)}
+
         <h2 style="margin-top: 32px; margin-bottom: 16px; font-size: 20px;">Últimos Movimientos</h2>
         ${lastTransactions.length > 0 ? `
             <div class="transaction-list">
