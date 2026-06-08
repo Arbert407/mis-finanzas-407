@@ -111,6 +111,12 @@ const renderHomeView = () => {
                 </div>
             </div>
             <div class="card chart-card">
+                <div class="chart-card__title">Perfil de Gastos</div>
+                <div class="chart-container" style="height: 350px;">
+                    <canvas id="polar-chart"></canvas>
+                </div>
+            </div>
+            <div class="card chart-card">
                 <div class="chart-card__title">Gastos por Día</div>
                 <div class="chart-container chart-container--bar" style="height: 300px;">
                     <canvas id="gastos-dia-chart"></canvas>
@@ -639,6 +645,7 @@ const render = () => {
             setTimeout(() => { initGastosHorarioChart(); }, 150);
             setTimeout(() => { initGastosDiaChart(); }, 200);
             setTimeout(() => { initBoxplotChart(); }, 250);
+            setTimeout(() => { initPolarChart(); }, 350);
             setTimeout(() => { renderCalendarHeatmap(); }, 300);
             break;
         case 'add-transaction':
@@ -679,6 +686,7 @@ window.addEventListener('charts:update', () => {
         setTimeout(() => { initGastosHorarioChart(); }, 100);
         setTimeout(() => { initGastosDiaChart(); }, 150);
         setTimeout(() => { initBoxplotChart(); }, 200);
+        setTimeout(() => { initPolarChart(); }, 300);
         setTimeout(() => { renderCalendarHeatmap(); }, 250);
     }
 });

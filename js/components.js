@@ -24,6 +24,7 @@ let comparacionChart = null;
 let boxplotChart = null;
 let gastosHorarioChart = null;
 let gastosDiaChart = null;
+let polarChart = null;
 
 // Calcula rangos de semanas para un mes específico.
 // Útil para gráficos de boxplot y comparación semanal.
@@ -547,6 +548,124 @@ const initGastosHorarioChart = () => {
                     stacked: true,
                     grid: { display: false },
                     ticks: { color: '#E5E7EB' }
+                }
+            }
+        }
+    });
+};
+
+// Inicializa gráfico radar de Perfil de Gastos por Categoría.
+// Muestra las top 6 categorías de gasto del mes actual vs mes anterior.
+// Útil para comparar patrones de gasto entre períodos.
+// Llama a: store.getState(), formatCurrency()
+const initPolarChart = () => {
+    const canvas = document.getElementById('polar-chart');
+    if (!canvas) return;
+    if (polarChart) polarChart.destroy();
+
+    const state = store.getState();
+    const selectedYear = state.selectedYear ?? new Date().getFullYear();
+    const selectedMonth = state.selectedMonth ?? new Date().getMonth();
+
+    const isSelectedMonth = (dateStr, year, month) => {
+        const date = new Date(dateStr.includes('T') ? dateStr : dateStr + 'T12:00:00');
+        return date.getFullYear() === year && date.getMonth() === month;
+    };
+
+    const currentMonthTx = store.getState().transactions.filter(t => 
+        t.tipo === 'Gasto' && isSelectedMonth(t.fecha, selectedYear, selectedMonth)
+    );
+
+    const prevMonth = selectedMonth === 0 ? 11 : selectedMonth - 1;
+    const prevYear = selectedMonth === 0 ? selectedYear - 1 : selectedYear;
+    const prevMonthTx = store.getState().transactions.filter(t => 
+        t.tipo === 'Gasto' && isSelectedMonth(t.fecha, prevYear, prevMonth)
+    );
+
+    const getGastosPorCategoria = (transactions) => {
+        const result = {};
+        transactions.forEach(t => {
+            const cat = t.categoria?.nombre || 'Otros';
+            result[cat] = (result[cat] || 0) + t.monto;
+        });
+        return result;
+    };
+
+    const currentData = getGastosPorCategoria(currentMonthTx);
+    const prevData = getGastosPorCategoria(prevMonthTx);
+
+    const allCategories = [...new Set([...Object.keys(currentData), ...Object.keys(prevData)])];
+    
+    const sorted = allCategories
+        .map(cat => ({
+            name: cat,
+            total: (currentData[cat] || 0) + (prevData[cat] || 0)
+        }))
+        .sort((a, b) => b.total - a.total)
+        .slice(0, 6);
+
+    const labels = sorted.map(c => c.name);
+    const currentValues = sorted.map(c => currentData[c.name] || 0);
+    const prevValues = sorted.map(c => prevData[c.name] || 0);
+
+    polarChart = new Chart(canvas, {
+        type: 'radar',
+        data: {
+            labels,
+            datasets: [
+                {
+                    label: 'Mes Anterior',
+                    data: prevValues,
+                    backgroundColor: 'rgba(139, 92, 246, 0.15)',
+                    borderColor: '#8B5CF6',
+                    borderWidth: 2,
+                    pointBackgroundColor: '#8B5CF6',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointRadius: 5,
+                    pointHoverRadius: 7
+                },
+                {
+                    label: 'Mes Actual',
+                    data: currentValues,
+                    backgroundColor: 'rgba(76, 201, 240, 0.15)',
+                    borderColor: '#4CC9F0',
+                    borderWidth: 2,
+                    pointBackgroundColor: '#4CC9F0',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    pointRadius: 5,
+                    pointHoverRadius: 7
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { color: '#9CA3AF', padding: 16, usePointStyle: true }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                    callbacks: {
+                        label: (ctx) => `${ctx.dataset.label}: ${formatCurrency(ctx.raw)}`
+                    }
+                }
+            },
+            scales: {
+                r: {
+                    beginAtZero: true,
+                    grid: { color: 'rgba(255,255,255,0.1)' },
+                    angleLines: { color: 'rgba(255,255,255,0.1)' },
+                    pointLabels: {
+                        color: '#E5E7EB',
+                        font: { size: 12 }
+                    },
+                    ticks: {
+                        display: false
+                    }
                 }
             }
         }

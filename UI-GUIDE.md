@@ -165,6 +165,6 @@ Font Family: 'Inter', system-ui, -apple-system, sans-serif
 ## Próximos Pasos
 1. Crear layout base
 2. Crear componentes reutilizables
-3. Integrar gráficos
+3. Integrar gráficos (incluido radar de salud financiera)
 4. Optimizar dark mode
 5. Validar accesibilidad
