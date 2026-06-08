@@ -687,32 +687,66 @@ const initNeedsWantsChart = () => {
         t.tipo === 'Gasto' && t.fecha?.startsWith(`${selectedYear}-${monthStr}`)
     );
 
-    let needsTotal = 0, wantsTotal = 0;
+    const needsByCategory = {};
+    const wantsByCategory = {};
+
     transactions.forEach(t => {
         const cat = state.categoriesGasto.find(c => c.id === t.categoria?.id);
         const asignacion = cat?.asignacion || 'wants';
-        if (asignacion === 'needs') needsTotal += t.monto;
-        else wantsTotal += t.monto;
+        const catName = cat?.nombre || 'Otro';
+        
+        if (asignacion === 'needs') {
+            needsByCategory[catName] = (needsByCategory[catName] || 0) + t.monto;
+        } else {
+            wantsByCategory[catName] = (wantsByCategory[catName] || 0) + t.monto;
+        }
+    });
+
+    const allCategories = [...new Set([...Object.keys(needsByCategory), ...Object.keys(wantsByCategory)])].filter(cat => 
+        (needsByCategory[cat] || 0) > 0 || (wantsByCategory[cat] || 0) > 0
+    );
+
+    const needsColors = ['#3B82F6', '#60A5FA', '#93C5FD', '#BFDBFE', '#DBEAFE'];
+    const wantsColors = ['#EC4899', '#F472B6', '#F9A8D4', '#FBCFE8', '#FDF2F8'];
+
+    const datasets = allCategories.map((cat, i) => {
+        const catDef = state.categoriesGasto.find(c => c.nombre === cat);
+        const isNeeds = catDef?.asignacion === 'needs';
+        const colorIndex = i % 5;
+        
+        return {
+            label: cat,
+            data: [needsByCategory[cat] || 0, wantsByCategory[cat] || 0],
+            backgroundColor: isNeeds ? needsColors[colorIndex] : wantsColors[colorIndex],
+            borderWidth: 0
+        };
     });
 
     needsWantsChart = new Chart(canvas, {
         type: 'bar',
         data: {
             labels: ['Necesidades', 'Deseos'],
-            datasets: [{
-                data: [needsTotal, wantsTotal],
-                backgroundColor: ['#3B82F6', '#EC4899'],
-                borderRadius: 8
-            }]
+            datasets
         },
         options: {
             indexAxis: 'y',
             responsive: true,
             maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
+            plugins: {
+                legend: { position: 'bottom', labels: { color: '#9CA3AF', padding: 12, usePointStyle: true } },
+                tooltip: { 
+                    backgroundColor: 'rgba(15, 23, 42, 0.95)', 
+                    callbacks: { 
+                        label: (ctx) => {
+                            const barTotal = ctx.chart.data.datasets.reduce((sum, ds) => sum + (ds.data[ctx.dataIndex] || 0), 0);
+                            return [`${ctx.dataset.label}: ${formatCurrency(ctx.raw)}`, `Total: ${formatCurrency(barTotal)}`];
+                        }
+                    } 
+                }
+            },
             scales: {
-                x: { beginAtZero: true, ticks: { callback: v => `L ${v.toLocaleString()}` } },
-                y: { grid: { display: false } }
+                x: { stacked: true, beginAtZero: true, ticks: { callback: v => `L ${v.toLocaleString()}` } },
+                y: { stacked: true, grid: { display: false } }
             }
         }
     });
@@ -979,17 +1013,25 @@ window.testAppscriptConnection = async () => {
 window.syncAllToSheet = async () => {
     const state = store.getState();
     if (state.transactions.length === 0) { showToast('No hay datos para sincronizar', 'warning'); return; }
-    showToast('Sincronizando...', 'info');
-    const result = await SyncService.syncIncremental(state.transactions);
-    showToast(result.success ? result.message : `Error: ${result.message}`, result.success ? 'success' : 'error');
+    let lastMsg = '';
+    const updateProgress = (info) => {
+        let msg;
+        if (info.stage === 'start') msg = `Iniciando sincronización de ${info.total} registros...`;
+        else if (info.stage === 'syncing') msg = `Sincronizando ${info.current}/${info.total} (${info.pct}%) - ${info.lastId}`;
+        if (msg && msg !== lastMsg) { lastMsg = msg; showToast(msg, 'info'); }
+    };
+    const result = await SyncService.syncIncremental(state.transactions, updateProgress);
+    if (result.failed > 0) showToast(`Sincronizados ${result.synced}, fallidos ${result.failed}`, 'warning');
+    else showToast(result.message, 'success');
 };
 
 window.importFromSheet = async () => {
-    showToast('Importando...', 'info');
+    showToast('Conectando con Google Sheets...', 'info');
     const result = await SyncService.importFromSheet();
     if (result.success && Array.isArray(result.data) && result.data.length > 0) {
         const state = store.getState();
         const rows = result.data;
+        showToast(`Recibidos ${rows.length} registros, procesando...`, 'info');
         let records = [];
         if (rows[0] && Array.isArray(rows[0]) && rows[0][0] === 'id') {
             const headers = rows[0];
@@ -1012,12 +1054,13 @@ window.importFromSheet = async () => {
             if (fechaStr && fechaStr.length > 0) fechaStr = fechaStr.length <= 10 ? fechaStr + 'T12:00:00' : !fechaStr.includes('T') ? fechaStr + ':00' : fechaStr;
             return { id: r.id || crypto.randomUUID(), tipo, monto: isNaN(monto) ? 0 : monto, categoria: catObj, fecha: fechaStr || new Date().toISOString(), descripcion: r.descripcion ? String(r.descripcion) : '', creado_en: r.creado_en || new Date().toISOString(), actualizado_en: r.actualizado_en || new Date().toISOString() };
         }).filter(t => t.monto > 0);
+        showToast(`Importando ${incoming.length} registros...`, 'info');
         const merged = [...state.transactions, ...incoming];
         const unique = merged.filter((t, i, arr) => arr.findIndex(x => x.id === t.id) === i);
         store.setState({ ...state, transactions: unique });
         render();
         closeModal();
-        showToast(`Importados ${incoming.length} registros`, 'success');
+        showToast(`Importados ${incoming.length} registros de ${rows.length} totales`, 'success');
     } else {
         showToast('No hay datos para importar', 'error');
     }

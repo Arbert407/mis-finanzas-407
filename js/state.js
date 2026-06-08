@@ -221,7 +221,7 @@ const SyncService = (() => {
         }
     };
 
-    const syncIncremental = async (records) => {
+    const syncIncremental = async (records, onProgress) => {
         const lastSync = localStorage.getItem(SYNC_TIMESTAMP_KEY);
         const newRecords = records.filter(t => {
             if (!t.creado_en && !t.actualizado_en) return true;
@@ -231,14 +231,21 @@ const SyncService = (() => {
             return !lastSync || latest > new Date(lastSync);
         });
         if (newRecords.length === 0) {
-            return { success: true, message: 'No hay registros nuevos', synced: 0 };
+            return { success: true, message: 'No hay registros nuevos', synced: 0, total: 0 };
         }
+        if (onProgress) onProgress({ stage: 'start', current: 0, total: newRecords.length, lastId: '' });
         let synced = 0;
-        for (const record of newRecords) {
-            const result = await syncToSheet(record);
+        let failed = 0;
+        for (let i = 0; i < newRecords.length; i++) {
+            const result = await syncToSheet(newRecords[i]);
             if (result.success) synced++;
+            else failed++;
+            if (onProgress && (i === 0 || (i + 1) % 10 === 0 || i === newRecords.length - 1)) {
+                const pct = Math.round(((i + 1) / newRecords.length) * 100);
+                onProgress({ stage: 'syncing', current: i + 1, total: newRecords.length, pct, lastId: String(newRecords[i].id).slice(0, 8) });
+            }
         }
-        return { success: true, message: `${synced} registros sincronizados`, synced };
+        return { success: true, message: failed > 0 ? `${synced} sincronizados, ${failed} fallidos` : `${synced} registros sincronizados`, synced, failed, total: newRecords.length };
     };
 
     const importFromSheet = async () => {
