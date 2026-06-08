@@ -603,11 +603,21 @@ const initPolarChart = () => {
             total: (currentData[cat] || 0) + (prevData[cat] || 0)
         }))
         .sort((a, b) => b.total - a.total)
-        .slice(0, 6);
+        .slice(0, 8);
 
     const labels = sorted.map(c => c.name);
     const currentValues = sorted.map(c => currentData[c.name] || 0);
     const prevValues = sorted.map(c => prevData[c.name] || 0);
+
+    const maxValue = Math.max(...currentValues, ...prevValues);
+    const minNonZero = Math.min(...currentValues.filter(v => v > 0), ...prevValues.filter(v => v > 0));
+    const useLogScale = minNonZero > 0 && (maxValue / minNonZero) > 50;
+
+    const transformToLog = (arr) => arr.map(v => v > 0 ? Math.log10(v + 1) : 0);
+    const logCurrentValues = transformToLog(currentValues);
+    const logPrevValues = transformToLog(prevValues);
+
+    const maxLogValue = Math.max(...logCurrentValues, ...logPrevValues);
 
     polarChart = new Chart(canvas, {
         type: 'radar',
@@ -616,7 +626,8 @@ const initPolarChart = () => {
             datasets: [
                 {
                     label: 'Mes Anterior',
-                    data: prevValues,
+                    data: useLogScale ? logPrevValues : prevValues,
+                    originalData: prevValues,
                     backgroundColor: 'rgba(139, 92, 246, 0.15)',
                     borderColor: '#8B5CF6',
                     borderWidth: 2,
@@ -628,7 +639,8 @@ const initPolarChart = () => {
                 },
                 {
                     label: 'Mes Actual',
-                    data: currentValues,
+                    data: useLogScale ? logCurrentValues : currentValues,
+                    originalData: currentValues,
                     backgroundColor: 'rgba(76, 201, 240, 0.15)',
                     borderColor: '#4CC9F0',
                     borderWidth: 2,
@@ -651,13 +663,18 @@ const initPolarChart = () => {
                 tooltip: {
                     backgroundColor: 'rgba(15, 23, 42, 0.95)',
                     callbacks: {
-                        label: (ctx) => `${ctx.dataset.label}: ${formatCurrency(ctx.raw)}`
+                        label: (ctx) => {
+                            const originalValue = ctx.dataset.originalData?.[ctx.dataIndex] ?? ctx.raw;
+                            return `${ctx.dataset.label}: ${formatCurrency(originalValue)}`;
+                        }
                     }
                 }
             },
             scales: {
                 r: {
                     beginAtZero: true,
+                    min: 0,
+                    max: useLogScale ? maxLogValue * 1.1 : undefined,
                     grid: { color: 'rgba(255,255,255,0.1)' },
                     angleLines: { color: 'rgba(255,255,255,0.1)' },
                     pointLabels: {
@@ -665,7 +682,17 @@ const initPolarChart = () => {
                         font: { size: 12 }
                     },
                     ticks: {
-                        display: false
+                        display: true,
+                        backdropColor: 'transparent',
+                        callback: (value) => {
+                            if (useLogScale) {
+                                const original = Math.pow(10, value) - 1;
+                                if (original >= 1000) return `L ${(original/1000).toFixed(0)}k`;
+                                return `L ${Math.round(original)}`;
+                            }
+                            if (value >= 1000) return `L ${(value/1000).toFixed(0)}k`;
+                            return `L ${value}`;
+                        }
                     }
                 }
             }

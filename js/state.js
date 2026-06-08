@@ -43,7 +43,7 @@ const initialState = {
         { id: 'g13', nombre: 'Suscripciones', icono: '📱', asignacion: 'wants' },
         { id: 'g14', nombre: 'Viajes', icono: '✈️', asignacion: 'wants' },
         { id: 'g15', nombre: 'Banca', icono: '🏦', asignacion: 'needs' },
-        { id: 'g16', nombre: 'Telecom', icono: '📞', asignacion: 'needs' },
+        { id: 'g16', nombre: 'Telecomunicaciones', icono: '📞', asignacion: 'needs' },
         { id: 'g17', nombre: 'Deportes', icono: '⚽', asignacion: 'wants' },
         { id: 'g18', nombre: 'Belleza', icono: '💅', asignacion: 'wants' },
         { id: 'g19', nombre: 'Juguetes', icono: '🎁', asignacion: 'wants' },
@@ -51,7 +51,8 @@ const initialState = {
         { id: 'g21', nombre: 'Parking', icono: '🅿️', asignacion: 'needs' },
         { id: 'g22', nombre: 'Combustible', icono: '⛽', asignacion: 'needs' },
         { id: 'g23', nombre: 'Taxi', icono: '🚕', asignacion: 'needs' },
-        { id: 'g24', nombre: 'Otros', icono: '📦', asignacion: 'wants' }
+        { id: 'g24', nombre: 'Otros', icono: '📦', asignacion: 'wants' },
+        { id: 'g25', nombre: 'Mantenimiento Automóvil', icono: '🔧', asignacion: 'needs' },
     ],
     categoriesIngreso: [
         { id: 'i1', nombre: 'Salario', icono: '💼' },
