@@ -25,6 +25,7 @@ let boxplotChart = null;
 let gastosHorarioChart = null;
 let gastosDiaChart = null;
 let polarChart = null;
+let needsWantsChart = null;
 
 // Calcula rangos de semanas para un mes específico.
 // Útil para gráficos de boxplot y comparación semanal.
@@ -667,6 +668,51 @@ const initPolarChart = () => {
                         display: false
                     }
                 }
+            }
+        }
+    });
+};
+
+const initNeedsWantsChart = () => {
+    const canvas = document.getElementById('needs-wants-chart');
+    if (!canvas) return;
+    if (needsWantsChart) needsWantsChart.destroy();
+
+    const state = store.getState();
+    const selectedYear = state.selectedYear ?? new Date().getFullYear();
+    const selectedMonth = state.selectedMonth ?? new Date().getMonth();
+    const monthStr = String(selectedMonth + 1).padStart(2, '0');
+
+    const transactions = state.transactions.filter(t => 
+        t.tipo === 'Gasto' && t.fecha?.startsWith(`${selectedYear}-${monthStr}`)
+    );
+
+    let needsTotal = 0, wantsTotal = 0;
+    transactions.forEach(t => {
+        const cat = state.categoriesGasto.find(c => c.id === t.categoria?.id);
+        const asignacion = cat?.asignacion || 'wants';
+        if (asignacion === 'needs') needsTotal += t.monto;
+        else wantsTotal += t.monto;
+    });
+
+    needsWantsChart = new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels: ['Necesidades', 'Deseos'],
+            datasets: [{
+                data: [needsTotal, wantsTotal],
+                backgroundColor: ['#3B82F6', '#EC4899'],
+                borderRadius: 8
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { beginAtZero: true, ticks: { callback: v => `L ${v.toLocaleString()}` } },
+                y: { grid: { display: false } }
             }
         }
     });

@@ -28,30 +28,30 @@ const createStore = (initialState) => {
 const initialState = {
     transactions: [],
     categoriesGasto: [
-        { id: 'g1', nombre: 'Alimentación', icono: '🍔' },
-        { id: 'g2', nombre: 'Transporte', icono: '🚗' },
-        { id: 'g3', nombre: 'Entretenimiento', icono: '🎮' },
-        { id: 'g4', nombre: 'Servicios', icono: '💡' },
-        { id: 'g5', nombre: 'Salud', icono: '🏥' },
-        { id: 'g6', nombre: 'Ropa', icono: '👕' },
-        { id: 'g7', nombre: 'Hogar', icono: '🏠' },
-        { id: 'g8', nombre: 'Educación', icono: '📚' },
-        { id: 'g9', nombre: 'Mascotas', icono: '🐕' },
-        { id: 'g10', nombre: 'Seguros', icono: '🛡️' },
-        { id: 'g11', nombre: 'Impuestos', icono: '📋' },
-        { id: 'g12', nombre: 'Restaurant', icono: '🍽️' },
-        { id: 'g13', nombre: 'Suscripciones', icono: '📱' },
-        { id: 'g14', nombre: 'Viajes', icono: '✈️' },
-        { id: 'g15', nombre: 'Banca', icono: '🏦' },
-        { id: 'g16', nombre: 'Telecom', icono: '📞' },
-        { id: 'g17', nombre: 'Deportes', icono: '⚽' },
-        { id: 'g18', nombre: 'Belleza', icono: '💅' },
-        { id: 'g19', nombre: 'Juguetes', icono: '🎁' },
-        { id: 'g20', nombre: 'Tecnología', icono: '💻' },
-        { id: 'g21', nombre: 'Parking', icono: '🅿️' },
-        { id: 'g22', nombre: 'Combustible', icono: '⛽' },
-        { id: 'g23', nombre: 'Taxi', icono: '🚕' },
-        { id: 'g24', nombre: 'Otros', icono: '📦' }
+        { id: 'g1', nombre: 'Alimentación', icono: '🍔', asignacion: 'needs' },
+        { id: 'g2', nombre: 'Transporte', icono: '🚗', asignacion: 'needs' },
+        { id: 'g3', nombre: 'Entretenimiento', icono: '🎮', asignacion: 'wants' },
+        { id: 'g4', nombre: 'Servicios', icono: '💡', asignacion: 'needs' },
+        { id: 'g5', nombre: 'Salud', icono: '🏥', asignacion: 'needs' },
+        { id: 'g6', nombre: 'Ropa', icono: '👕', asignacion: 'needs' },
+        { id: 'g7', nombre: 'Hogar', icono: '🏠', asignacion: 'needs' },
+        { id: 'g8', nombre: 'Educación', icono: '📚', asignacion: 'needs' },
+        { id: 'g9', nombre: 'Mascotas', icono: '🐕', asignacion: 'wants' },
+        { id: 'g10', nombre: 'Seguros', icono: '🛡️', asignacion: 'needs' },
+        { id: 'g11', nombre: 'Impuestos', icono: '📋', asignacion: 'needs' },
+        { id: 'g12', nombre: 'Restaurant', icono: '🍽️', asignacion: 'wants' },
+        { id: 'g13', nombre: 'Suscripciones', icono: '📱', asignacion: 'wants' },
+        { id: 'g14', nombre: 'Viajes', icono: '✈️', asignacion: 'wants' },
+        { id: 'g15', nombre: 'Banca', icono: '🏦', asignacion: 'needs' },
+        { id: 'g16', nombre: 'Telecom', icono: '📞', asignacion: 'needs' },
+        { id: 'g17', nombre: 'Deportes', icono: '⚽', asignacion: 'wants' },
+        { id: 'g18', nombre: 'Belleza', icono: '💅', asignacion: 'wants' },
+        { id: 'g19', nombre: 'Juguetes', icono: '🎁', asignacion: 'wants' },
+        { id: 'g20', nombre: 'Tecnología', icono: '💻', asignacion: 'wants' },
+        { id: 'g21', nombre: 'Parking', icono: '🅿️', asignacion: 'needs' },
+        { id: 'g22', nombre: 'Combustible', icono: '⛽', asignacion: 'needs' },
+        { id: 'g23', nombre: 'Taxi', icono: '🚕', asignacion: 'needs' },
+        { id: 'g24', nombre: 'Otros', icono: '📦', asignacion: 'wants' }
     ],
     categoriesIngreso: [
         { id: 'i1', nombre: 'Salario', icono: '💼' },
@@ -116,10 +116,22 @@ const DataService = (() => {
                     const newCats = defaults.categoriesGasto.filter(c => !existingIds.has(c.id));
                     parsed.categoriesGasto = [...parsed.categoriesGasto, ...newCats];
                 }
+                if (parsed.categoriesGasto) {
+                    parsed.categoriesGasto = parsed.categoriesGasto.map(cat => {
+                        const def = defaults.categoriesGasto.find(d => d.id === cat.id);
+                        return def ? { ...def, ...cat } : cat;
+                    });
+                }
                 if (parsed.categoriesIngreso && parsed.categoriesIngreso.length < defaults.categoriesIngreso.length) {
                     const existingIds = new Set(parsed.categoriesIngreso.map(c => c.id));
                     const newCats = defaults.categoriesIngreso.filter(c => !existingIds.has(c.id));
                     parsed.categoriesIngreso = [...parsed.categoriesIngreso, ...newCats];
+                }
+                if (parsed.categoriesIngreso) {
+                    parsed.categoriesIngreso = parsed.categoriesIngreso.map(cat => {
+                        const def = defaults.categoriesIngreso.find(d => d.id === cat.id);
+                        return def ? { ...def, ...cat } : cat;
+                    });
                 }
                 if (!parsed.selectedType) parsed.selectedType = 'Gasto';
                 if (!parsed.historyFilter) parsed.historyFilter = 'all';
