@@ -154,10 +154,37 @@ const renderHomeView = () => {
     `;
 };
 
-// Renderiza el formulario para crear un nuevo movimiento financiero.
-// Muestra selector de tipo (Gasto/Ingreso), campos de monto, fecha, categoría y descripción.
-// Utiliza DatePicker.init() para el selector de fecha.
-// Llama a: selectType() (cambia tipo), DatePicker.init() (componente fecha)
+const getTopCategories = (type, limit = 3) => {
+    const state = store.getState();
+    const transactions = state.transactions.filter(t => t.tipo === type);
+    const categoryCounts = {};
+    transactions.forEach(t => {
+        if (t.categoria?.id) {
+            categoryCounts[t.categoria.id] = (categoryCounts[t.categoria.id] || 0) + 1;
+        }
+    });
+    const sorted = Object.entries(categoryCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, limit);
+    const categories = type === 'Gasto' ? state.categoriesGasto : state.categoriesIngreso;
+    return sorted.map(([id]) => categories.find(c => c.id === id)).filter(Boolean);
+};
+
+const renderCategoryShortcuts = (type, selectedId = null) => {
+    const topCats = getTopCategories(type, 3);
+    if (topCats.length === 0) return '';
+    return `
+        <div class="category-shortcuts" id="category-shortcuts">
+            ${topCats.map(c => `
+                <button type="button" class="category-shortcut ${selectedId === c.id ? 'category-shortcut--active' : ''}" 
+                        onclick="selectCategoryShortcut('${c.id}')" data-category-id="${c.id}">
+                    ${c.icono} ${c.nombre}
+                </button>
+            `).join('')}
+        </div>
+    `;
+};
+
 const renderAddTransactionView = () => {
     const state = store.getState();
     const selectedType = state.selectedType || 'Gasto';
@@ -193,6 +220,7 @@ const renderAddTransactionView = () => {
 
                     <div class="form-group">
                         <label class="form-label" for="categoria">Categoría *</label>
+                        ${renderCategoryShortcuts(selectedType)}
                         <select id="categoria" class="form-select" required>
                             <option value="">Selecciona una categoría</option>
                             ${categories.map(c => `
@@ -271,6 +299,7 @@ const renderEditTransactionView = () => {
 
                     <div class="form-group">
                         <label class="form-label" for="categoria">Categoría *</label>
+                        ${renderCategoryShortcuts(transaction.tipo, transaction.categoria?.id)}
                         <select id="categoria" class="form-select" required>
                             <option value="">Selecciona una categoría</option>
                             ${categories.map(c => `
@@ -438,6 +467,19 @@ window.selectType = (type) => {
     updateCategorySelect(type);
 };
 
+window.selectCategoryShortcut = (categoryId) => {
+    const select = document.getElementById('categoria');
+    if (select) {
+        select.value = categoryId;
+        document.querySelectorAll('.category-shortcut').forEach(btn => {
+            btn.classList.remove('category-shortcut--active');
+            if (btn.dataset.categoryId === categoryId) {
+                btn.classList.add('category-shortcut--active');
+            }
+        });
+    }
+};
+
 const updateCategorySelect = (type) => {
     const state = store.getState();
     const categories = type === 'Gasto' ? state.categoriesGasto : state.categoriesIngreso;
@@ -447,6 +489,10 @@ const updateCategorySelect = (type) => {
             <option value="">Selecciona una categoría</option>
             ${categories.map(c => `<option value="${c.id}">${c.icono} ${c.nombre}</option>`).join('')}
         `;
+    }
+    const shortcutsContainer = document.getElementById('category-shortcuts');
+    if (shortcutsContainer) {
+        shortcutsContainer.outerHTML = renderCategoryShortcuts(type);
     }
 };
 
