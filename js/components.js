@@ -890,7 +890,7 @@ const DatePicker = (() => {
 
     const updateInputValue = () => {
         if (inputElement && selectedDate) {
-            inputElement.value = formatDateForInput(selectedDate, selectedHour, selectedMinute);
+            inputElement.value = selectedDate.toISOString().slice(0, 10);
             if (onSelectCallback) onSelectCallback(inputElement.value);
         }
     };
@@ -901,15 +901,22 @@ const DatePicker = (() => {
             dropdownElement = dropdownEl;
             onSelectCallback = onSelect;
             const initialValue = inputElement.value;
-            if (initialValue && initialValue.includes('T')) {
-                const [datePart, timePart] = initialValue.split('T');
-                const [y, m, d] = datePart.split('-').map(Number);
-                selectedDate = new Date(y, m - 1, d);
-                currentMonth = selectedDate.getMonth();
-                currentYear = selectedDate.getFullYear();
-                const [h, min] = timePart.split(':').map(Number);
-                selectedHour = h;
-                selectedMinute = min;
+            if (initialValue) {
+                if (initialValue.includes('T')) {
+                    const [datePart, timePart] = initialValue.split('T');
+                    const [y, m, d] = datePart.split('-').map(Number);
+                    selectedDate = new Date(y, m - 1, d);
+                    currentMonth = selectedDate.getMonth();
+                    currentYear = selectedDate.getFullYear();
+                    const [h, min] = timePart.split(':').map(Number);
+                    selectedHour = h;
+                    selectedMinute = min;
+                } else {
+                    const [y, m, d] = initialValue.split('-').map(Number);
+                    selectedDate = new Date(y, m - 1, d);
+                    currentMonth = selectedDate.getMonth();
+                    currentYear = selectedDate.getFullYear();
+                }
             }
             inputElement.addEventListener('click', () => {
                 document.querySelectorAll('.date-picker-dropdown').forEach(d => d.classList.remove('date-picker-dropdown--active'));

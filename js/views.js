@@ -202,8 +202,8 @@ const renderAddTransactionView = () => {
     const selectedType = state.selectedType || 'Gasto';
     const categories = selectedType === 'Gasto' ? state.categoriesGasto : state.categoriesIngreso;
     const now = new Date();
-    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-    const today = now.toISOString().slice(0, 16);
+    const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const today = now.toISOString().slice(0, 10);
 
     return `
         <h1 class="page-title">Agregar Movimiento</h1>
@@ -240,11 +240,24 @@ const renderAddTransactionView = () => {
                             `).join('')}
                         </select>
                     </div>
+                </div>
+
+                <div class="form-row form-row--inline">
+                    <div class="form-group">
+                        <label class="form-label" for="hora">Hora *</label>
+                        <div class="time-input-wrapper">
+                            <select id="hora" class="form-input time-select" required>
+                                ${Array.from({length: 24}, (_, i) => `<option value="${String(i).padStart(2, '0')}" ${i === now.getHours() ? 'selected' : ''}>${String(i).padStart(2, '0')}</option>`).join('')}
+                            </select>
+                            <span class="time-separator">:</span>
+                            <input type="number" id="minuto" class="form-input time-input" min="0" max="59" value="${String(now.getMinutes()).padStart(2, '0')}" required>
+                        </div>
+                    </div>
 
                     <div class="form-group">
-                        <label class="form-label" for="fecha">Fecha y Hora *</label>
+                        <label class="form-label" for="fecha">Fecha *</label>
                         <div class="date-picker-wrapper">
-                            <input type="text" id="fecha" class="date-picker-input" placeholder="Seleccionar fecha y hora" value="${today}" readonly>
+                            <input type="text" id="fecha" class="date-picker-input" placeholder="Seleccionar fecha" value="${today}" readonly>
                             <span class="date-picker-icon">📅</span>
                             <div class="date-picker-dropdown" id="fecha-dropdown"></div>
                         </div>
@@ -283,6 +296,11 @@ const renderEditTransactionView = () => {
     }
 
     const categories = transaction.tipo === 'Gasto' ? state.categoriesGasto : state.categoriesIngreso;
+    const fechaParts = transaction.fecha.includes('T') ? transaction.fecha.split('T') : [transaction.fecha, '10:00'];
+    const editDate = fechaParts[0];
+    const editTimeParts = fechaParts[1] ? fechaParts[1].split(':') : ['10', '00'];
+    const editHour = editTimeParts[0];
+    const editMinute = editTimeParts[1];
 
     return `
         <h1 class="page-title">Editar Movimiento</h1>
@@ -319,11 +337,24 @@ const renderEditTransactionView = () => {
                             `).join('')}
                         </select>
                     </div>
+                </div>
+
+                <div class="form-row form-row--inline">
+                    <div class="form-group">
+                        <label class="form-label" for="hora">Hora *</label>
+                        <div class="time-input-wrapper">
+                            <select id="hora" class="form-input time-select" required>
+                                ${Array.from({length: 24}, (_, i) => `<option value="${String(i).padStart(2, '0')}" ${i === parseInt(editHour) ? 'selected' : ''}>${String(i).padStart(2, '0')}</option>`).join('')}
+                            </select>
+                            <span class="time-separator">:</span>
+                            <input type="number" id="minuto" class="form-input time-input" min="0" max="59" value="${editMinute}" required>
+                        </div>
+                    </div>
 
                     <div class="form-group">
-                        <label class="form-label" for="fecha">Fecha y Hora *</label>
+                        <label class="form-label" for="fecha">Fecha *</label>
                         <div class="date-picker-wrapper">
-                            <input type="text" id="fecha" class="date-picker-input" placeholder="Seleccionar fecha y hora" value="${transaction.fecha.includes('T') ? transaction.fecha : transaction.fecha + 'T10:00'}" readonly>
+                            <input type="text" id="fecha" class="date-picker-input" placeholder="Seleccionar fecha" value="${editDate}" readonly>
                             <span class="date-picker-icon">📅</span>
                             <div class="date-picker-dropdown" id="fecha-dropdown"></div>
                         </div>
@@ -570,6 +601,9 @@ const handleFormSubmit = (e) => {
     const tipo = document.getElementById('tipo').value;
     const monto = parseFloat(montoInput.value);
     const fecha = document.getElementById('fecha').value;
+    const hora = document.getElementById('hora').value.padStart(2, '0');
+    const minuto = document.getElementById('minuto').value.padStart(2, '0');
+    const fechaHora = `${fecha}T${hora}:${minuto}`;
     const categoriaId = document.getElementById('categoria').value;
     const descripcion = document.getElementById('descripcion').value;
 
@@ -581,7 +615,7 @@ const handleFormSubmit = (e) => {
         id: generateId(),
         tipo,
         monto,
-        fecha,
+        fecha: fechaHora,
         descripcion,
         categoria,
         creado_en: new Date().toISOString()
@@ -613,6 +647,9 @@ const handleEditFormSubmit = (e, id) => {
     const tipo = document.getElementById('tipo').value;
     const monto = parseFloat(montoInput.value);
     const fecha = document.getElementById('fecha').value;
+    const hora = document.getElementById('hora').value.padStart(2, '0');
+    const minuto = document.getElementById('minuto').value.padStart(2, '0');
+    const fechaHora = `${fecha}T${hora}:${minuto}`;
     const categoriaId = document.getElementById('categoria').value;
     const descripcion = document.getElementById('descripcion').value;
 
@@ -622,7 +659,7 @@ const handleEditFormSubmit = (e, id) => {
 
     const updatedTransactions = state.transactions.map(t => {
         if (t.id === id) {
-            return { ...t, tipo, monto, fecha, descripcion, categoria, actualizado_en: new Date().toISOString() };
+            return { ...t, tipo, monto, fecha: fechaHora, descripcion, categoria, actualizado_en: new Date().toISOString() };
         }
         return t;
     });
