@@ -444,7 +444,7 @@ input[type="text"]::placeholder {
     scroll-behavior: smooth;
     -webkit-overflow-scrolling: touch;
     width: 100%;
-    padding: 0 24px;
+    padding: 24px 24px;
     scroll-snap-type: none;
 }
 
@@ -1509,24 +1509,26 @@ input[type="text"]::placeholder {
 
 .balance-card {
     text-align: center;
-    padding: 24px;
+    padding: 32px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     position: relative;
-    overflow: hidden;
+    overflow: visible;
     transition: transform 0.3s ease, opacity 0.3s ease, box-shadow 0.3s ease;
     opacity: 0.6;
     transform: scale(0.92);
-    min-height: 180px;
+    min-height: 220px;
+    border-radius: 16px;
+    margin: 16px 0;
 }
 
 .balance-card--active {
     opacity: 1;
     transform: scale(1.02);
-    box-shadow: 0 0 30px rgba(76, 201, 240, 0.3);
-    min-height: 200px;
+    box-shadow: 0 0 40px rgba(76, 201, 240, 0.4);
+    min-height: 240px;
 }
 
 .balance-card--balance {
