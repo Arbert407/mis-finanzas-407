@@ -1093,12 +1093,10 @@ window.loadDummyData = () => {
     const now = new Date();
     const year = now.getFullYear();
     const month = now.getMonth();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
     const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
     const monthLabel = `${monthNames[month]} ${year}`;
 
     const generateId = () => `dummy-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-
     const randomBetween = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
 
     const categoriesGasto = [
@@ -1114,13 +1112,12 @@ window.loadDummyData = () => {
     const categoriesIngreso = [
         { id: 'i1', nombre: 'Salario', icono: '💰', asignacion: 'needs' },
         { id: 'i2', nombre: 'Freelance', icono: '💻', asignacion: 'wants' },
-        { id: 'i3', nombre: 'Inversión', icono: '📈', asignacion: 'needs' },
     ];
 
     const transactions = [];
 
-    const addTransaction = (tipo, monto, categoria, descripcion, day, hour = null) => {
-        const d = new Date(year, month, day, hour ?? randomBetween(8, 20), randomBetween(0, 59));
+    const addTransaction = (tipo, monto, categoria, descripcion, day) => {
+        const d = new Date(year, month, day, randomBetween(8, 18), randomBetween(0, 59));
         transactions.push({
             id: generateId(),
             tipo,
@@ -1132,109 +1129,53 @@ window.loadDummyData = () => {
         });
     };
 
-    // Salario quincenal (1 y 15 de cada mes)
-    const salarioQuincenal1 = 52000;
-    const salarioQuincenal2 = 52000;
-    addTransaction('Ingreso', salarioQuincenal1, categoriesIngreso[0], 'Salario quincenal - Banco Atlántida', 1, 9);
-    addTransaction('Ingreso', salarioQuincenal2, categoriesIngreso[0], 'Salario quincenal - Banco Atlántida', 15, 9);
+    let totalIngresos = 0;
+    let totalGastos = 0;
 
-    // Income adicional frecuente (freelance)
-    if (Math.random() > 0.3) {
-        addTransaction('Ingreso', randomBetween(8000, 18000), categoriesIngreso[1], 'Proyecto freelance', randomBetween(10, 25));
+    // Ingresos (suma no pasa de 2000, máximo 2-3 registros)
+    const numIngresos = randomBetween(2, 3);
+    const ingresoTargets = [0, 0, 0];
+    let targetIngresos = randomBetween(1000, 1950);
+    ingresoTargets[0] = Math.floor(targetIngresos / numIngresos);
+    ingresoTargets[1] = Math.floor(targetIngresos / numIngresos);
+    if (numIngresos === 3) ingresoTargets[2] = targetIngresos - ingresoTargets[0] - ingresoTargets[1];
+
+    for (let i = 0; i < numIngresos; i++) {
+        const monto = randomBetween(Math.max(100, ingresoTargets[i] - 200), Math.min(1900, ingresoTargets[i] + 100));
+        addTransaction('Ingreso', monto, categoriesIngreso[0], i === 0 ? 'Salario' : 'Freelance', randomBetween(1, 28));
+        totalIngresos += monto;
     }
-    if (Math.random() > 0.5) {
-        addTransaction('Ingreso', randomBetween(5000, 12000), categoriesIngreso[2], 'Dividendos inversión', randomBetween(5, 20));
-    }
 
-    // Gastos fijos mensuales
-    const alquiler = 18000;
-    addTransaction('Gasto', alquiler, categoriesGasto[6], 'Alquiler de apartamento', randomBetween(1, 3));
+    // Gastos (suma no pasa de 1300, máximo 8-15 registros)
+    const numGastos = randomBetween(8, 15);
+    const categoriasGastos = [categoriesGasto[0], categoriesGasto[1], categoriesGasto[3], categoriesGasto[5], categoriesGasto[2]];
+    const descripcionesGastos = ['Alimentación', 'Transporte', 'Servicios', 'Restaurant', 'Entretenimiento'];
 
-    const servicios = randomBetween(2500, 4000);
-    addTransaction('Gasto', servicios, categoriesGasto[3], 'Servicios (agua, luz, internet)', randomBetween(5, 10));
+    let targetGastos = randomBetween(600, 1250);
+    let montoRestante = targetGastos;
 
-    const internet = 1800;
-    addTransaction('Gasto', internet, categoriesGasto[6], 'InternetClaro Fiber', 5);
-
-    const planCelular = 1200;
-    addTransaction('Gasto', planCelular, categoriesGasto[6], 'Plan Tigo Max', 8);
-
-    // Alimentación (gastos frecuentes, amounts más altos)
-    const foodDescriptions = [
-        'Supermercado La Colonia - Compras de la semana',
-        'Mercado del Pict',
-        'Supermercado PriceSmart',
-        'Despensa familiar',
-        'Supermercado Walmart',
-    ];
-
-    for (let day = 1; day <= daysInMonth; day++) {
-        const isWeekend = [0, 6].includes(new Date(year, month, day).getDay());
-        const shouldBuy = isWeekend ? Math.random() > 0.15 : Math.random() > 0.5;
-
-        if (shouldBuy) {
-            const foodAmount = isWeekend
-                ? randomBetween(1200, 2500)
-                : randomBetween(500, 1200);
-            const desc = foodDescriptions[randomBetween(0, foodDescriptions.length - 1)];
-            addTransaction('Gasto', foodAmount, categoriesGasto[0], desc, day);
+    for (let i = 0; i < numGastos; i++) {
+        const catIndex = i % categoriasGastos.length;
+        let monto;
+        if (i === numGastos - 1) {
+            monto = montoRestante;
+        } else {
+            monto = randomBetween(50, Math.min(300, montoRestante - (numGastos - i - 1) * 50));
         }
+        monto = Math.max(30, monto);
+        montoRestante -= monto;
+
+        addTransaction('Gasto', monto, categoriasGastos[catIndex], descripcionesGastos[catIndex], randomBetween(1, 28));
+        totalGastos += monto;
     }
 
-    // Transporte (gasolina 2-3 veces por semana)
-    const gasStationDescriptions = ['BCH Gasolinera', 'Shell Los Próceres', 'UNO Gas', 'ExxonMetro'];
-    for (let day = 1; day <= daysInMonth; day++) {
-        if (Math.random() > 0.5) {
-            addTransaction('Gasto', randomBetween(800, 1800), categoriesGasto[1], gasStationDescriptions[randomBetween(0, 3)], day);
-        }
-    }
-
-    // Restaurant/Ocio (3-4 veces por semana)
-    const restaurantDescriptions = [
-        'Café Milano',
-        'KFC',
-        'Pollo Campero',
-        'Shucos Don Juan',
-        'Pizza Hut delivery',
-        'Pupusas El Gordo',
-    ];
-
-    for (let day = 1; day <= daysInMonth; day++) {
-        if (Math.random() > 0.55) {
-            addTransaction('Gasto', randomBetween(400, 1200), categoriesGasto[5], restaurantDescriptions[randomBetween(0, restaurantDescriptions.length - 1)], day);
-        }
-    }
-
-    // Salud (ocasional, montos más altos)
-    const healthDescriptions = [
-        'Farmacia Benad',
-        'Consulta médica privada',
-        'Medicamentos recetados',
-        'Laboratorios Diaceutna',
-    ];
-
-    if (Math.random() > 0.5) {
-        addTransaction('Gasto', randomBetween(800, 2500), categoriesGasto[4], healthDescriptions[randomBetween(0, healthDescriptions.length - 1)], randomBetween(1, daysInMonth));
-    }
-
-    // Entretenimiento (ocasional pero más frecuente)
-    if (Math.random() > 0.6) {
-        addTransaction('Gasto', randomBetween(500, 1200), categoriesGasto[2], 'Netflix Premium', randomBetween(1, 10));
-    }
-    if (Math.random() > 0.7) {
-        addTransaction('Gasto', randomBetween(800, 2000), categoriesGasto[2], 'Spotify Premium', randomBetween(1, 15));
-    }
+    const balance = totalIngresos - totalGastos;
 
     // Ordenar por fecha descendente
     transactions.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
 
-    // Calcular totals
-    const totalIngresos = transactions.filter(t => t.tipo === 'Ingreso').reduce((sum, t) => sum + t.monto, 0);
-    const totalGastos = transactions.filter(t => t.tipo === 'Gasto').reduce((sum, t) => sum + t.monto, 0);
-    const balance = totalIngresos - totalGastos;
-
     const data = {
-        description: `Datos dummy para ${monthLabel} - Usuario con buenos hábitos financieros en Honduras`,
+        description: `Datos dummy para ${monthLabel} - Balance positivo con gastos moderados`,
         generated: new Date().toISOString(),
         summary: {
             totalIngresos,
