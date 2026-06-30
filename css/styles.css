@@ -426,9 +426,10 @@ input[type="text"]::placeholder {
 
 .date-picker-dropdown {
     display: none;
-    position: absolute;
-    top: calc(100% + 8px);
-    left: 0;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
     z-index: 1000;
     background: var(--bg);
     border: 1px solid var(--border);
