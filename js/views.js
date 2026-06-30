@@ -601,6 +601,71 @@ window.updateCarouselDots = function(activeIndex) {
     });
 };
 
+window.initCarouselTouch = function() {
+    const track = document.getElementById('carousel-track');
+    if (!track) return;
+
+    let startX = 0;
+    let isDragging = false;
+    let scrollTimeout = null;
+
+    track.addEventListener('touchstart', (e) => {
+        startX = e.touches[0].clientX;
+        isDragging = true;
+    }, { passive: true });
+
+    track.addEventListener('touchend', (e) => {
+        if (!isDragging) return;
+        const endX = e.changedTouches[0].clientX;
+        const diff = startX - endX;
+        const threshold = 50;
+
+        if (Math.abs(diff) > threshold) {
+            if (diff > 0) {
+                moveCarousel(1);
+            } else {
+                moveCarousel(-1);
+            }
+        }
+        isDragging = false;
+    }, { passive: true });
+
+    track.addEventListener('scroll', () => {
+        if (isDragging) return;
+
+        if (scrollTimeout) clearTimeout(scrollTimeout);
+
+        scrollTimeout = setTimeout(() => {
+            const cards = track.querySelectorAll('.balance-card');
+            const trackRect = track.getBoundingClientRect();
+            const centerX = trackRect.left + trackRect.width / 2;
+
+            let closestIndex = 0;
+            let closestDistance = Infinity;
+
+            cards.forEach((card, index) => {
+                const cardRect = card.getBoundingClientRect();
+                const cardCenterX = cardRect.left + cardRect.width / 2;
+                const distance = Math.abs(cardCenterX - centerX);
+
+                if (distance < closestDistance) {
+                    closestDistance = distance;
+                    closestIndex = index;
+                }
+            });
+
+            const currentIndex = parseInt(track.dataset.currentIndex || 0);
+            if (closestIndex !== currentIndex) {
+                track.dataset.currentIndex = closestIndex;
+                cards.forEach((card, i) => {
+                    card.classList.toggle('balance-card--active', i === closestIndex);
+                });
+                updateCarouselDots(closestIndex);
+            }
+        }, 100);
+    }, { passive: true });
+};
+
 window.goToCarouselIndex = function(index) {
     const track = document.getElementById('carousel-track');
     if (!track) return;
@@ -997,7 +1062,10 @@ const render = () => {
                     cards.forEach((card, i) => {
                         card.classList.toggle('balance-card--active', i === currentIndex);
                     });
-                    if (cards[currentIndex]) cards[currentIndex].scrollIntoView({ behavior: 'auto', inline: 'center', block: 'nearest' });
+                    setTimeout(() => {
+                        if (cards[currentIndex]) cards[currentIndex].scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                    }, 10);
+                    setTimeout(() => { initCarouselTouch(); }, 300);
                 }
             }, 50);
             setTimeout(() => { initBalanceChart(); }, 60);
