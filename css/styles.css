@@ -432,15 +432,20 @@ input[type="text"]::placeholder {
     margin-bottom: 8px;
 }
 
+.summary-carousel {
+    position: relative;
+    overflow: hidden;
+}
+
 .summary-carousel__track {
     display: flex;
     gap: 16px;
     overflow-x: auto;
     scroll-behavior: smooth;
-    scroll-snap-type: x mandatory;
     -webkit-overflow-scrolling: touch;
     width: 100%;
-    padding: 8px 0;
+    padding: 8px 24px;
+    scroll-snap-type: none;
 }
 
 .summary-carousel__track::-webkit-scrollbar {
@@ -448,10 +453,12 @@ input[type="text"]::placeholder {
 }
 
 .summary-carousel__track > .balance-card {
-    flex: 0 0 100%;
-    scroll-snap-align: center;
+    flex: 0 0 calc(100% - 48px);
+    scroll-snap-align: none;
     min-width: 280px;
+    max-width: 400px;
     cursor: pointer;
+    transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
 .summary-carousel__track > .balance-card:hover {
@@ -461,12 +468,14 @@ input[type="text"]::placeholder {
 @media (min-width: 768px) {
     .summary-carousel__track {
         justify-content: center;
+        overflow-x: visible;
+        gap: 24px;
+        padding: 0;
     }
 
     .summary-carousel__track > .balance-card {
         flex: 0 0 auto;
         min-width: 280px;
-        cursor: pointer;
     }
 
     .summary-carousel__track > .balance-card:not(.balance-card--active):hover {

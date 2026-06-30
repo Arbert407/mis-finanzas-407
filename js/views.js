@@ -579,11 +579,15 @@ window.hideHourOptions = function(select) {
 window.moveCarousel = function(direction) {
     const track = document.getElementById('carousel-track');
     if (!track) return;
+    if (track.dataset.animating === 'true') return;
+
     const cards = track.querySelectorAll('.balance-card');
     const currentIndex = parseInt(track.dataset.currentIndex || 0);
     let newIndex = currentIndex + direction;
     if (newIndex < 0) newIndex = cards.length - 1;
     if (newIndex >= cards.length) newIndex = 0;
+
+    track.dataset.animating = 'true';
     track.dataset.currentIndex = newIndex;
 
     cards.forEach((card, i) => {
@@ -591,8 +595,20 @@ window.moveCarousel = function(direction) {
     });
 
     const targetCard = cards[newIndex];
-    targetCard.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    const trackRect = track.getBoundingClientRect();
+    const cardRect = targetCard.getBoundingClientRect();
+    const scrollLeft = track.scrollLeft + (cardRect.left - trackRect.left) - ((trackRect.width - cardRect.width) / 2);
+
+    track.scrollTo({
+        left: Math.max(0, scrollLeft),
+        behavior: 'smooth'
+    });
+
     updateCarouselDots(newIndex);
+
+    setTimeout(() => {
+        track.dataset.animating = 'false';
+    }, 350);
 };
 
 window.updateCarouselDots = function(activeIndex) {
@@ -607,59 +623,78 @@ window.initCarouselTouch = function() {
 
     let startX = 0;
     let startY = 0;
-    let isScrolling = false;
+    let isHorizontalSwipe = false;
 
     track.addEventListener('touchstart', (e) => {
         startX = e.touches[0].clientX;
         startY = e.touches[0].clientY;
+        isHorizontalSwipe = false;
     }, { passive: true });
 
     track.addEventListener('touchmove', (e) => {
+        if (track.dataset.animating === 'true') {
+            e.preventDefault();
+            return;
+        }
+
         const currentX = e.touches[0].clientX;
         const currentY = e.touches[0].clientY;
         const diffX = Math.abs(currentX - startX);
         const diffY = Math.abs(currentY - startY);
 
         if (diffX > diffY && diffX > 10) {
-            isScrolling = true;
+            isHorizontalSwipe = true;
+            e.preventDefault();
+        } else if (isHorizontalSwipe) {
+            e.preventDefault();
         }
-    }, { passive: true });
+    }, { passive: false });
 
     track.addEventListener('touchend', (e) => {
-        if (!isScrolling) return;
+        if (!isHorizontalSwipe) return;
+        if (track.dataset.animating === 'true') return;
 
         const endX = e.changedTouches[0].clientX;
         const diff = startX - endX;
-        const threshold = 30;
 
-        if (Math.abs(diff) > threshold) {
+        if (Math.abs(diff) > 50) {
             if (diff > 0) {
                 moveCarousel(1);
             } else {
                 moveCarousel(-1);
             }
         }
-
-        isScrolling = false;
-    }, { passive: true });
-
-    track.addEventListener('touchcancel', () => {
-        isScrolling = false;
     }, { passive: true });
 };
 
 window.goToCarouselIndex = function(index) {
     const track = document.getElementById('carousel-track');
     if (!track) return;
+    if (track.dataset.animating === 'true') return;
     const cards = track.querySelectorAll('.balance-card');
     if (index < 0 || index >= cards.length) return;
 
+    track.dataset.animating = 'true';
     track.dataset.currentIndex = index;
     cards.forEach((card, i) => {
         card.classList.toggle('balance-card--active', i === index);
     });
-    cards[index].scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+
+    const targetCard = cards[index];
+    const trackRect = track.getBoundingClientRect();
+    const cardRect = targetCard.getBoundingClientRect();
+    const scrollLeft = track.scrollLeft + (cardRect.left - trackRect.left) - ((trackRect.width - cardRect.width) / 2);
+
+    track.scrollTo({
+        left: Math.max(0, scrollLeft),
+        behavior: 'smooth'
+    });
+
     updateCarouselDots(index);
+
+    setTimeout(() => {
+        track.dataset.animating = 'false';
+    }, 350);
 };
 
 const initBalanceChart = () => {
@@ -1044,12 +1079,9 @@ const render = () => {
                     cards.forEach((card, i) => {
                         card.classList.toggle('balance-card--active', i === currentIndex);
                     });
-                    setTimeout(() => {
-                        if (cards[currentIndex]) cards[currentIndex].scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-                    }, 10);
-                    setTimeout(() => { initCarouselTouch(); }, 300);
+                    initCarouselTouch();
                 }
-            }, 50);
+            }, 100);
             setTimeout(() => { initBalanceChart(); }, 60);
             setTimeout(() => { initIngresosChart(); }, 70);
             setTimeout(() => { initGastosSummaryChart(); }, 80);
