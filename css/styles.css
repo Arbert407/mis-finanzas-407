@@ -532,38 +532,6 @@ input[type="text"]::placeholder {
     color: var(--bg);
 }
 
-.date-picker-time {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-top: 16px;
-    padding-top: 16px;
-    border-top: 1px solid var(--border);
-}
-
-.date-picker-time-label {
-    font-size: 12px;
-    color: var(--text-muted);
-}
-
-.date-picker-time-input {
-    width: 70px;
-    height: 32px;
-    padding: 0 8px;
-    background: rgba(255,255,255,0.05);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    color: var(--text-primary);
-    font-size: 14px;
-    font-family: inherit;
-    text-align: center;
-}
-
-.date-picker-time-input:focus {
-    outline: none;
-    border-color: var(--primary);
-}
-
 .form-select {
     appearance: none;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239CA3AF' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");

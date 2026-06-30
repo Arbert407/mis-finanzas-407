@@ -838,12 +838,8 @@ const DatePicker = (() => {
     let currentMonth = new Date().getMonth();
     let currentYear = new Date().getFullYear();
     let selectedDate = null;
-    let selectedHour = 10;
-    let selectedMinute = 0;
     let inputElement = null, dropdownElement = null, onSelectCallback = null;
     const weekDays = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-
-    const formatDateForInput = (date, hour, minute) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
 
     const render = () => {
         const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
@@ -868,23 +864,12 @@ const DatePicker = (() => {
             </div>
             <div class="date-picker-weekdays">${weekDays.map(d => `<div class="date-picker-weekday">${d}</div>`).join('')}</div>
             <div class="date-picker-days">${daysHtml}</div>
-            <div class="date-picker-time">
-                <span class="date-picker-time-label">Hora:</span>
-                <input type="number" class="date-picker-time-input" id="picker-hour" value="${String(selectedHour).padStart(2, '0')}" min="0" max="23">
-                <span style="color: var(--text-muted);">:</span>
-                <input type="number" class="date-picker-time-input" id="picker-minute" value="${String(selectedMinute).padStart(2, '0')}" min="0" max="59">
-            </div>
         `;
 
         dropdownElement.onclick = (e) => {
             if (e.target.id === 'prev-month') { currentMonth--; if (currentMonth < 0) { currentMonth = 11; currentYear--; } render(); }
             else if (e.target.id === 'next-month') { currentMonth++; if (currentMonth > 11) { currentMonth = 0; currentYear++; } render(); }
             else if (e.target.classList.contains('date-picker-day') && !e.target.classList.contains('date-picker-day--other')) { selectedDate = new Date(currentYear, currentMonth, parseInt(e.target.dataset.day)); render(); updateInputValue(); }
-        };
-
-        dropdownElement.onchange = (e) => {
-            if (e.target.id === 'picker-hour') { selectedHour = Math.max(0, Math.min(23, parseInt(e.target.value) || 0)); e.target.value = String(selectedHour).padStart(2, '0'); updateInputValue(); }
-            else if (e.target.id === 'picker-minute') { selectedMinute = Math.max(0, Math.min(59, parseInt(e.target.value) || 0)); e.target.value = String(selectedMinute).padStart(2, '0'); updateInputValue(); }
         };
     };
 
@@ -902,21 +887,10 @@ const DatePicker = (() => {
             onSelectCallback = onSelect;
             const initialValue = inputElement.value;
             if (initialValue) {
-                if (initialValue.includes('T')) {
-                    const [datePart, timePart] = initialValue.split('T');
-                    const [y, m, d] = datePart.split('-').map(Number);
-                    selectedDate = new Date(y, m - 1, d);
-                    currentMonth = selectedDate.getMonth();
-                    currentYear = selectedDate.getFullYear();
-                    const [h, min] = timePart.split(':').map(Number);
-                    selectedHour = h;
-                    selectedMinute = min;
-                } else {
-                    const [y, m, d] = initialValue.split('-').map(Number);
-                    selectedDate = new Date(y, m - 1, d);
-                    currentMonth = selectedDate.getMonth();
-                    currentYear = selectedDate.getFullYear();
-                }
+                const [y, m, d] = initialValue.split('-').map(Number);
+                selectedDate = new Date(y, m - 1, d);
+                currentMonth = selectedDate.getMonth();
+                currentYear = selectedDate.getFullYear();
             }
             inputElement.addEventListener('click', () => {
                 document.querySelectorAll('.date-picker-dropdown').forEach(d => d.classList.remove('date-picker-dropdown--active'));

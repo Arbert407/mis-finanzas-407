@@ -246,8 +246,12 @@ const renderAddTransactionView = () => {
                     <div class="form-group">
                         <label class="form-label" for="hora">Hora *</label>
                         <div class="time-input-wrapper">
-                            <select id="hora" class="form-input time-select" required>
-                                ${Array.from({length: 24}, (_, i) => `<option value="${String(i).padStart(2, '0')}" ${i === now.getHours() ? 'selected' : ''}>${String(i).padStart(2, '0')}</option>`).join('')}
+                            <select id="hora" class="form-input time-select" required onfocus="showHourOptions(this)" onblur="hideHourOptions(this)">
+                                ${Array.from({length: 24}, (_, i) => {
+                                    const hour12 = i % 12 || 12;
+                                    const ampm = i < 12 ? 'AM' : 'PM';
+                                    return `<option value="${String(i).padStart(2, '0')}" data-full="${i} (${hour12} ${ampm})">${i}</option>`;
+                                }).join('')}
                             </select>
                             <span class="time-separator">:</span>
                             <input type="number" id="minuto" class="form-input time-input" min="0" max="59" value="${String(now.getMinutes()).padStart(2, '0')}" required>
@@ -343,8 +347,12 @@ const renderEditTransactionView = () => {
                     <div class="form-group">
                         <label class="form-label" for="hora">Hora *</label>
                         <div class="time-input-wrapper">
-                            <select id="hora" class="form-input time-select" required>
-                                ${Array.from({length: 24}, (_, i) => `<option value="${String(i).padStart(2, '0')}" ${i === parseInt(editHour) ? 'selected' : ''}>${String(i).padStart(2, '0')}</option>`).join('')}
+                            <select id="hora" class="form-input time-select" required onfocus="showHourOptions(this)" onblur="hideHourOptions(this)">
+                                ${Array.from({length: 24}, (_, i) => {
+                                    const hour12 = i % 12 || 12;
+                                    const ampm = i < 12 ? 'AM' : 'PM';
+                                    return `<option value="${String(i).padStart(2, '0')}" data-full="${i} (${hour12} ${ampm})" ${i === parseInt(editHour) ? 'selected' : ''}>${i}</option>`;
+                                }).join('')}
                             </select>
                             <span class="time-separator">:</span>
                             <input type="number" id="minuto" class="form-input time-input" min="0" max="59" value="${editMinute}" required>
@@ -521,6 +529,18 @@ window.selectCategoryShortcut = (categoryId) => {
             }
         });
     }
+};
+
+window.showHourOptions = function(select) {
+    select.querySelectorAll('option').forEach(opt => {
+        opt.textContent = opt.dataset.full;
+    });
+};
+
+window.hideHourOptions = function(select) {
+    select.querySelectorAll('option').forEach(opt => {
+        opt.textContent = opt.value;
+    });
 };
 
 const updateCategorySelect = (type) => {
