@@ -424,6 +424,105 @@ input[type="text"]::placeholder {
     }
 }
 
+.summary-carousel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 8px;
+}
+
+.summary-carousel__track {
+    display: flex;
+    gap: 16px;
+    overflow-x: auto;
+    scroll-behavior: smooth;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
+    padding: 8px 0;
+}
+
+.summary-carousel__track::-webkit-scrollbar {
+    display: none;
+}
+
+.summary-carousel__track > .balance-card {
+    flex: 0 0 100%;
+    scroll-snap-align: center;
+    min-width: 280px;
+    cursor: pointer;
+}
+
+.summary-carousel__track > .balance-card:hover {
+    opacity: 0.85;
+}
+
+@media (min-width: 768px) {
+    .summary-carousel__track {
+        justify-content: center;
+    }
+
+    .summary-carousel__track > .balance-card {
+        flex: 0 0 auto;
+        min-width: 280px;
+    }
+
+    .summary-carousel__track > .balance-card:not(.balance-card--active):hover {
+        opacity: 0.8;
+        transform: scale(0.97);
+    }
+}
+
+.summary-carousel__nav {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.summary-carousel__btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    color: var(--text-primary);
+    font-size: 20px;
+    cursor: pointer;
+    transition: var(--transition-fast);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.summary-carousel__btn:hover {
+    background: rgba(255,255,255,0.12);
+}
+
+.summary-carousel__dots {
+    display: flex;
+    gap: 8px;
+}
+
+.summary-carousel__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    cursor: pointer;
+    transition: var(--transition-fast);
+}
+
+.summary-carousel__dot--active {
+    background: var(--primary);
+    transform: scale(1.2);
+}
+
+.summary-carousel__dot:hover {
+    background: var(--primary);
+    opacity: 0.7;
+}
+
 .date-picker-dropdown {
     display: none;
     position: fixed;
@@ -1407,22 +1506,71 @@ input[type="text"]::placeholder {
     justify-content: center;
     position: relative;
     overflow: hidden;
+    transition: transform 0.3s ease, opacity 0.3s ease, box-shadow 0.3s ease;
+    opacity: 0.6;
+    transform: scale(0.92);
+    min-height: 180px;
 }
 
-.balance-card::before {
-    content: '';
+.balance-card--active {
+    opacity: 1;
+    transform: scale(1.02);
+    box-shadow: 0 0 30px rgba(76, 201, 240, 0.3);
+    min-height: 200px;
+}
+
+.balance-card--balance {
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(76, 201, 240, 0.15) 100%);
+}
+
+.balance-card--ingresos {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(74, 222, 128, 0.1) 100%);
+}
+
+.balance-card--gastos {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(248, 113, 113, 0.1) 100%);
+}
+
+.balance-card__watermark {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 140px;
+    opacity: 0.06;
+    pointer-events: none;
+    user-select: none;
+    z-index: 0;
+}
+
+.balance-card__chart {
     position: absolute;
     top: 0;
     left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(135deg, transparent 0%, rgba(255, 255, 255, 0.03) 100%);
+    width: 100% !important;
+    height: 100% !important;
+    z-index: 0;
+    opacity: 0.5;
     pointer-events: none;
 }
 
+.balance-card__chart canvas {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+.balance-card__watermark,
+.balance-card__icon,
+.balance-card__label,
+.balance-card__amount,
+.balance-card__subtitle {
+    position: relative;
+    z-index: 1;
+}
+
 .balance-card__icon {
-    width: 52px;
-    height: 52px;
+    width: 56px;
+    height: 56px;
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -1430,7 +1578,9 @@ input[type="text"]::placeholder {
     font-size: 28px;
     font-weight: 800;
     margin-bottom: 12px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    position: relative;
+    z-index: 1;
 }
 
 .balance-card__icon--positive {
@@ -1443,6 +1593,11 @@ input[type="text"]::placeholder {
     color: #fff;
 }
 
+.balance-card__icon--neutral {
+    background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+    color: #fff;
+}
+
 .balance-card__label {
     font-size: 13px;
     color: var(--text-secondary);
@@ -1450,53 +1605,49 @@ input[type="text"]::placeholder {
     letter-spacing: 1px;
     font-weight: 600;
     margin-bottom: 4px;
+    position: relative;
+    z-index: 1;
 }
 
 .balance-card__amount {
-    font-size: 26px;
+    font-size: 28px;
     font-weight: 900;
-    letter-spacing: -2px;
-    line-height: 1.3;
-    text-transform: uppercase;
+    letter-spacing: -1px;
+    line-height: 1.2;
+    position: relative;
+    z-index: 1;
 }
 
 .balance-card__amount--positive {
-    color: #4ade80;
-    text-shadow: 0 0 15px rgba(74, 222, 128, 0.35);
-}
-
-.balance-card__amount--negative {
-    color: #f87171;
-    text-shadow: 0 0 15px rgba(248, 113, 113, 0.35);
-}
-
-.balance-card__amount--positive {
-    background: linear-gradient(180deg, #4ade80 0%, #22C55E 50%, #16a34a 100%);
+    background: linear-gradient(180deg, #4ade80 0%, #22C55E 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+    filter: drop-shadow(0 0 8px rgba(74, 222, 128, 0.4));
 }
 
 .balance-card__amount--negative {
-    background: linear-gradient(180deg, #f87171 0%, #ef4444 50%, #dc2626 100%);
+    background: linear-gradient(180deg, #f87171 0%, #ef4444 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+    filter: drop-shadow(0 0 8px rgba(248, 113, 113, 0.4));
+}
+
+.balance-card__amount--neutral {
+    background: linear-gradient(180deg, #a78bfa 0%, #8b5cf6 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 8px rgba(139, 92, 246, 0.4));
 }
 
 .balance-card__subtitle {
     font-size: 12px;
     color: var(--text-muted);
     margin-top: 8px;
-    opacity: 0.7;
-}
-
-.balance-card__amount--positive {
-    color: var(--success);
-}
-
-.balance-card__amount--negative {
-    color: var(--danger);
+    position: relative;
+    z-index: 1;
 }
 
 /* Loading */

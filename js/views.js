@@ -24,17 +24,32 @@
  *   - js/utils.js (utilidades helper)
  *   - index.html (template base)
  */
+const calculateDailyBalance = (transactions, year, month) => {
+    const dailyData = {};
+    transactions.forEach(t => {
+        const d = new Date(t.fecha.includes('T') ? t.fecha : t.fecha + 'T00:00');
+        if (d.getFullYear() === year && d.getMonth() === month) {
+            const day = d.getDate();
+            if (!dailyData[day]) dailyData[day] = 0;
+            dailyData[day] += t.tipo === 'Ingreso' ? t.monto : -t.monto;
+        }
+    });
+    return Object.entries(dailyData)
+        .map(([day, balance]) => ({ day: parseInt(day), balance }))
+        .sort((a, b) => a.day - b.day);
+};
+
 const renderHomeView = () => {
     const state = store.getState();
     const transactions = store.getState().transactions;
     const selectedYear = state.selectedYear ?? new Date().getFullYear();
     const selectedMonth = state.selectedMonth ?? new Date().getMonth();
-    
+
     const monthlyTransactions = transactions.filter(t => {
         const d = new Date(t.fecha.includes('T') ? t.fecha : t.fecha + 'T00:00');
         return d.getFullYear() === selectedYear && d.getMonth() === selectedMonth;
     });
-    
+
     const totalIngresos = monthlyTransactions
         .filter(t => t.tipo === 'Ingreso')
         .reduce((sum, t) => sum + t.monto, 0);
@@ -55,32 +70,49 @@ const renderHomeView = () => {
 
     return `
         <h1 class="page-title">Dashboard</h1>
-        <div class="dashboard-grid">
-            <div class="card balance-card">
-                <div class="balance-card__icon ${balance >= 0 ? 'balance-card__icon--positive' : 'balance-card__icon--negative'}">
-                    ${balance >= 0 ? '↑' : '↓'}
+        <div class="summary-carousel">
+            <div class="summary-carousel__track" id="carousel-track" data-current-index="0">
+                <div class="card balance-card balance-card--balance balance-card--active" data-index="0">
+                    <canvas id="balance-chart" class="balance-card__chart"></canvas>
+                    <span class="balance-card__watermark">⚖️</span>
+                    <div class="balance-card__icon ${balance >= 0 ? 'balance-card__icon--positive' : 'balance-card__icon--negative'}">
+                        ${balance >= 0 ? '↑' : '↓'}
+                    </div>
+                    <div class="balance-card__label">Balance Total</div>
+                    <div class="balance-card__amount ${balance >= 0 ? 'balance-card__amount--positive' : 'balance-card__amount--negative'}">
+                        ${formatCurrency(balance)}
+                    </div>
+                    <div class="balance-card__subtitle">de ${monthLabel}</div>
                 </div>
-                <div class="balance-card__label">Balance Total</div>
-                <div class="balance-card__amount ${balance >= 0 ? 'balance-card__amount--positive' : 'balance-card__amount--negative'}">
-                    ${formatCurrency(balance)}
+                <div class="card balance-card balance-card--ingresos" data-index="1">
+                    <canvas id="ingresos-chart" class="balance-card__chart"></canvas>
+                    <span class="balance-card__watermark">💰</span>
+                    <div class="balance-card__icon balance-card__icon--positive">+</div>
+                    <div class="balance-card__label">Ingresos</div>
+                    <div class="balance-card__amount balance-card__amount--positive">
+                        ${formatCurrency(totalIngresos)}
+                    </div>
+                    <div class="balance-card__subtitle">de ${monthLabel}</div>
                 </div>
-                <div class="balance-card__subtitle">de ${monthLabel}</div>
+                <div class="card balance-card balance-card--gastos" data-index="2">
+                    <canvas id="gastos-summary-chart" class="balance-card__chart"></canvas>
+                    <span class="balance-card__watermark">💸</span>
+                    <div class="balance-card__icon balance-card__icon--negative">−</div>
+                    <div class="balance-card__label">Gastos</div>
+                    <div class="balance-card__amount balance-card__amount--negative">
+                        ${formatCurrency(totalGastos)}
+                    </div>
+                    <div class="balance-card__subtitle">de ${monthLabel}</div>
+                </div>
             </div>
-            <div class="card balance-card">
-                <div class="balance-card__icon balance-card__icon--positive">+</div>
-                <div class="balance-card__label">Ingresos</div>
-                <div class="balance-card__amount balance-card__amount--positive">
-                    ${formatCurrency(totalIngresos)}
+            <div class="summary-carousel__nav">
+                <button class="summary-carousel__btn" onclick="moveCarousel(-1)">‹</button>
+                <div class="summary-carousel__dots">
+                    <span class="summary-carousel__dot summary-carousel__dot--active" data-index="0" onclick="goToCarouselIndex(0)"></span>
+                    <span class="summary-carousel__dot" data-index="1" onclick="goToCarouselIndex(1)"></span>
+                    <span class="summary-carousel__dot" data-index="2" onclick="goToCarouselIndex(2)"></span>
                 </div>
-                <div class="balance-card__subtitle">de ${monthLabel}</div>
-            </div>
-            <div class="card balance-card">
-                <div class="balance-card__icon balance-card__icon--negative">−</div>
-                <div class="balance-card__label">Gastos</div>
-                <div class="balance-card__amount balance-card__amount--negative">
-                    ${formatCurrency(totalGastos)}
-                </div>
-                <div class="balance-card__subtitle">de ${monthLabel}</div>
+                <button class="summary-carousel__btn" onclick="moveCarousel(1)">›</button>
             </div>
         </div>
 
@@ -250,7 +282,8 @@ const renderAddTransactionView = () => {
                                 ${Array.from({length: 24}, (_, i) => {
                                     const hour12 = i % 12 || 12;
                                     const ampm = i < 12 ? 'AM' : 'PM';
-                                    return `<option value="${String(i).padStart(2, '0')}" data-full="${i} (${hour12} ${ampm})">${i}</option>`;
+                                    const selected = i === now.getHours() ? 'selected' : '';
+                                    return `<option value="${String(i).padStart(2, '0')}" data-full="${i} (${hour12} ${ampm})" ${selected}>${i}</option>`;
                                 }).join('')}
                             </select>
                             <span class="time-separator">:</span>
@@ -543,6 +576,258 @@ window.hideHourOptions = function(select) {
     });
 };
 
+window.moveCarousel = function(direction) {
+    const track = document.getElementById('carousel-track');
+    if (!track) return;
+    const cards = track.querySelectorAll('.balance-card');
+    const currentIndex = parseInt(track.dataset.currentIndex || 0);
+    let newIndex = currentIndex + direction;
+    if (newIndex < 0) newIndex = cards.length - 1;
+    if (newIndex >= cards.length) newIndex = 0;
+    track.dataset.currentIndex = newIndex;
+
+    cards.forEach((card, i) => {
+        card.classList.toggle('balance-card--active', i === newIndex);
+    });
+
+    const targetCard = cards[newIndex];
+    targetCard.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    updateCarouselDots(newIndex);
+};
+
+window.updateCarouselDots = function(activeIndex) {
+    document.querySelectorAll('.summary-carousel__dot').forEach(dot => {
+        dot.classList.toggle('summary-carousel__dot--active', parseInt(dot.dataset.index) === activeIndex);
+    });
+};
+
+window.goToCarouselIndex = function(index) {
+    const track = document.getElementById('carousel-track');
+    if (!track) return;
+    const cards = track.querySelectorAll('.balance-card');
+    if (index < 0 || index >= cards.length) return;
+
+    track.dataset.currentIndex = index;
+    cards.forEach((card, i) => {
+        card.classList.toggle('balance-card--active', i === index);
+    });
+    cards[index].scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    updateCarouselDots(index);
+};
+
+const initBalanceChart = () => {
+    const canvas = document.getElementById('balance-chart');
+    if (!canvas) return;
+
+    const state = store.getState();
+    const selectedYear = state.selectedYear ?? new Date().getFullYear();
+    const selectedMonth = state.selectedMonth ?? new Date().getMonth();
+
+    const dailyBalance = calculateDailyBalance(state.transactions, selectedYear, selectedMonth);
+    if (dailyBalance.length === 0) return;
+
+    const labels = dailyBalance.map(d => d.day);
+    const data = dailyBalance.map(d => d.balance);
+
+    new Chart(canvas, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                data,
+                borderColor: '#a78bfa',
+                borderWidth: 2,
+                fill: true,
+                backgroundColor: (context) => {
+                    const chart = context.chart;
+                    const { ctx, chartArea } = chart;
+                    if (!chartArea) return 'rgba(167, 139, 250, 0.1)';
+                    const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+                    gradient.addColorStop(0, 'rgba(167, 139, 250, 0.2)');
+                    gradient.addColorStop(1, 'rgba(167, 139, 250, 0.01)');
+                    return gradient;
+                },
+                tension: 0.4,
+                pointRadius: 0,
+                pointHoverRadius: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: { enabled: false }
+            },
+            scales: {
+                x: { display: false, grid: { display: false } },
+                y: { display: false, grid: { display: false } }
+            },
+            layout: {
+                padding: {
+                    left: 0,
+                    right: 0,
+                    top: 0,
+                    bottom: 0
+                }
+            },
+            interaction: { intersect: false }
+        }
+    });
+};
+
+const calculateDailyIngresos = (transactions, year, month) => {
+    const dailyData = {};
+    transactions.forEach(t => {
+        const d = new Date(t.fecha.includes('T') ? t.fecha : t.fecha + 'T00:00');
+        if (d.getFullYear() === year && d.getMonth() === month && t.tipo === 'Ingreso') {
+            const day = d.getDate();
+            if (!dailyData[day]) dailyData[day] = 0;
+            dailyData[day] += t.monto;
+        }
+    });
+    return Object.entries(dailyData)
+        .map(([day, monto]) => ({ day: parseInt(day), monto }))
+        .sort((a, b) => a.day - b.day);
+};
+
+const initIngresosChart = () => {
+    const canvas = document.getElementById('ingresos-chart');
+    if (!canvas) return;
+
+    const state = store.getState();
+    const selectedYear = state.selectedYear ?? new Date().getFullYear();
+    const selectedMonth = state.selectedMonth ?? new Date().getMonth();
+
+    const dailyIngresos = calculateDailyIngresos(state.transactions, selectedYear, selectedMonth);
+    if (dailyIngresos.length === 0) return;
+
+    const labels = dailyIngresos.map(d => d.day);
+    const data = dailyIngresos.map(d => d.monto);
+
+    new Chart(canvas, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                data,
+                borderColor: '#4ade80',
+                borderWidth: 2,
+                fill: true,
+                backgroundColor: (context) => {
+                    const chart = context.chart;
+                    const { ctx, chartArea } = chart;
+                    if (!chartArea) return 'rgba(74, 222, 128, 0.1)';
+                    const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+                    gradient.addColorStop(0, 'rgba(74, 222, 128, 0.2)');
+                    gradient.addColorStop(1, 'rgba(74, 222, 128, 0.01)');
+                    return gradient;
+                },
+                tension: 0.4,
+                pointRadius: 0,
+                pointHoverRadius: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: { enabled: false }
+            },
+            scales: {
+                x: { display: false, grid: { display: false } },
+                y: { display: false, grid: { display: false } }
+            },
+            layout: {
+                padding: {
+                    left: 0,
+                    right: 0,
+                    top: 0,
+                    bottom: 0
+                }
+            },
+            interaction: { intersect: false }
+        }
+    });
+};
+
+const calculateDailyGastos = (transactions, year, month) => {
+    const dailyData = {};
+    transactions.forEach(t => {
+        const d = new Date(t.fecha.includes('T') ? t.fecha : t.fecha + 'T00:00');
+        if (d.getFullYear() === year && d.getMonth() === month && t.tipo === 'Gasto') {
+            const day = d.getDate();
+            if (!dailyData[day]) dailyData[day] = 0;
+            dailyData[day] += t.monto;
+        }
+    });
+    return Object.entries(dailyData)
+        .map(([day, monto]) => ({ day: parseInt(day), monto }))
+        .sort((a, b) => a.day - b.day);
+};
+
+const initGastosSummaryChart = () => {
+    const canvas = document.getElementById('gastos-summary-chart');
+    if (!canvas) return;
+
+    const state = store.getState();
+    const selectedYear = state.selectedYear ?? new Date().getFullYear();
+    const selectedMonth = state.selectedMonth ?? new Date().getMonth();
+
+    const dailyGastos = calculateDailyGastos(state.transactions, selectedYear, selectedMonth);
+    if (dailyGastos.length === 0) return;
+
+    const labels = dailyGastos.map(d => d.day);
+    const data = dailyGastos.map(d => d.monto);
+
+    new Chart(canvas, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                data,
+                borderColor: '#f87171',
+                borderWidth: 2,
+                fill: true,
+                backgroundColor: (context) => {
+                    const chart = context.chart;
+                    const { ctx, chartArea } = chart;
+                    if (!chartArea) return 'rgba(248, 113, 113, 0.1)';
+                    const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+                    gradient.addColorStop(0, 'rgba(248, 113, 113, 0.2)');
+                    gradient.addColorStop(1, 'rgba(248, 113, 113, 0.01)');
+                    return gradient;
+                },
+                tension: 0.4,
+                pointRadius: 0,
+                pointHoverRadius: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: { enabled: false }
+            },
+            scales: {
+                x: { display: false, grid: { display: false } },
+                y: { display: false, grid: { display: false } }
+            },
+            layout: {
+                padding: {
+                    left: 0,
+                    right: 0,
+                    top: 0,
+                    bottom: 0
+                }
+            },
+            interaction: { intersect: false }
+        }
+    });
+};
+
 const updateCategorySelect = (type) => {
     const state = store.getState();
     const categories = type === 'Gasto' ? state.categoriesGasto : state.categoriesIngreso;
@@ -704,6 +989,20 @@ const render = () => {
             main.innerHTML = renderHomeView();
             const fabHome = document.querySelector('.fab');
             if (fabHome) fabHome.classList.remove('fab--hidden');
+            setTimeout(() => {
+                const track = document.getElementById('carousel-track');
+                if (track) {
+                    const cards = track.querySelectorAll('.balance-card');
+                    const currentIndex = parseInt(track.dataset.currentIndex || 0);
+                    cards.forEach((card, i) => {
+                        card.classList.toggle('balance-card--active', i === currentIndex);
+                    });
+                    if (cards[currentIndex]) cards[currentIndex].scrollIntoView({ behavior: 'auto', inline: 'center', block: 'nearest' });
+                }
+            }, 50);
+            setTimeout(() => { initBalanceChart(); }, 60);
+            setTimeout(() => { initIngresosChart(); }, 70);
+            setTimeout(() => { initGastosSummaryChart(); }, 80);
             setTimeout(() => { initGastosChart(); }, 100);
             setTimeout(() => { initGastosHorarioChart(); }, 150);
             setTimeout(() => { initGastosDiaChart(); }, 200);
