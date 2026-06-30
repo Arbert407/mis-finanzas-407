@@ -606,19 +606,31 @@ window.initCarouselTouch = function() {
     if (!track) return;
 
     let startX = 0;
-    let isDragging = false;
-    let scrollTimeout = null;
+    let startY = 0;
+    let isScrolling = false;
 
     track.addEventListener('touchstart', (e) => {
         startX = e.touches[0].clientX;
-        isDragging = true;
+        startY = e.touches[0].clientY;
+    }, { passive: true });
+
+    track.addEventListener('touchmove', (e) => {
+        const currentX = e.touches[0].clientX;
+        const currentY = e.touches[0].clientY;
+        const diffX = Math.abs(currentX - startX);
+        const diffY = Math.abs(currentY - startY);
+
+        if (diffX > diffY && diffX > 10) {
+            isScrolling = true;
+        }
     }, { passive: true });
 
     track.addEventListener('touchend', (e) => {
-        if (!isDragging) return;
+        if (!isScrolling) return;
+
         const endX = e.changedTouches[0].clientX;
         const diff = startX - endX;
-        const threshold = 50;
+        const threshold = 30;
 
         if (Math.abs(diff) > threshold) {
             if (diff > 0) {
@@ -627,42 +639,12 @@ window.initCarouselTouch = function() {
                 moveCarousel(-1);
             }
         }
-        isDragging = false;
+
+        isScrolling = false;
     }, { passive: true });
 
-    track.addEventListener('scroll', () => {
-        if (isDragging) return;
-
-        if (scrollTimeout) clearTimeout(scrollTimeout);
-
-        scrollTimeout = setTimeout(() => {
-            const cards = track.querySelectorAll('.balance-card');
-            const trackRect = track.getBoundingClientRect();
-            const centerX = trackRect.left + trackRect.width / 2;
-
-            let closestIndex = 0;
-            let closestDistance = Infinity;
-
-            cards.forEach((card, index) => {
-                const cardRect = card.getBoundingClientRect();
-                const cardCenterX = cardRect.left + cardRect.width / 2;
-                const distance = Math.abs(cardCenterX - centerX);
-
-                if (distance < closestDistance) {
-                    closestDistance = distance;
-                    closestIndex = index;
-                }
-            });
-
-            const currentIndex = parseInt(track.dataset.currentIndex || 0);
-            if (closestIndex !== currentIndex) {
-                track.dataset.currentIndex = closestIndex;
-                cards.forEach((card, i) => {
-                    card.classList.toggle('balance-card--active', i === closestIndex);
-                });
-                updateCarouselDots(closestIndex);
-            }
-        }, 100);
+    track.addEventListener('touchcancel', () => {
+        isScrolling = false;
     }, { passive: true });
 };
 
