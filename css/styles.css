@@ -466,6 +466,7 @@ input[type="text"]::placeholder {
     .summary-carousel__track > .balance-card {
         flex: 0 0 auto;
         min-width: 280px;
+        cursor: pointer;
     }
 
     .summary-carousel__track > .balance-card:not(.balance-card--active):hover {

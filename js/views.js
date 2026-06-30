@@ -72,7 +72,7 @@ const renderHomeView = () => {
         <h1 class="page-title">Dashboard</h1>
         <div class="summary-carousel">
             <div class="summary-carousel__track" id="carousel-track" data-current-index="0">
-                <div class="card balance-card balance-card--balance balance-card--active" data-index="0">
+                <div class="card balance-card balance-card--balance balance-card--active" data-index="0" onclick="goToCarouselIndex(0)">
                     <canvas id="balance-chart" class="balance-card__chart"></canvas>
                     <span class="balance-card__watermark">⚖️</span>
                     <div class="balance-card__icon ${balance >= 0 ? 'balance-card__icon--positive' : 'balance-card__icon--negative'}">
@@ -84,7 +84,7 @@ const renderHomeView = () => {
                     </div>
                     <div class="balance-card__subtitle">de ${monthLabel}</div>
                 </div>
-                <div class="card balance-card balance-card--ingresos" data-index="1">
+                <div class="card balance-card balance-card--ingresos" data-index="1" onclick="goToCarouselIndex(1)">
                     <canvas id="ingresos-chart" class="balance-card__chart"></canvas>
                     <span class="balance-card__watermark">💰</span>
                     <div class="balance-card__icon balance-card__icon--positive">+</div>
@@ -94,7 +94,7 @@ const renderHomeView = () => {
                     </div>
                     <div class="balance-card__subtitle">de ${monthLabel}</div>
                 </div>
-                <div class="card balance-card balance-card--gastos" data-index="2">
+                <div class="card balance-card balance-card--gastos" data-index="2" onclick="goToCarouselIndex(2)">
                     <canvas id="gastos-summary-chart" class="balance-card__chart"></canvas>
                     <span class="balance-card__watermark">💸</span>
                     <div class="balance-card__icon balance-card__icon--negative">−</div>
